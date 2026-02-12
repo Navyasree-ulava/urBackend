@@ -91,3 +91,18 @@ module.exports.updateExternalConfigSchema = z.object({
 }, {
     message: "Provide either a DB URI or a complete Storage config (URL + Key)."
 });
+
+module.exports.userSignupSchema = z.object({
+    username: z.string()
+        .min(3, { message: "Username must be at least 3 characters." })
+        .max(30, { message: "Username is too long." }).optional(),
+
+    email: z.string()
+        .min(1, { message: "Email is required." })
+        .email({ message: "Invalid email format." })
+        .max(100, { message: "Email is too long." }),
+
+    password: z.string()
+        .min(6, { message: "Password must be at least 6 characters." })
+        .max(100, { message: "Password is too long." })
+}).passthrough();

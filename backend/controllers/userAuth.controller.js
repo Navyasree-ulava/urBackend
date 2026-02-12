@@ -2,14 +2,16 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const mongoose = require('mongoose');
-const { loginSchema, signupSchema } = require('../utils/input.validation');
+const { loginSchema, userSignupSchema } = require('../utils/input.validation');
 
 module.exports.signup = async (req, res) => {
     try {
         const project = req.project;
 
+        const data = userSignupSchema.parse(req.body);
+
         // Zod Validation (Prevents NoSQL Injection too)
-        const { email, password, username, ...otherData } = signupSchema.parse(req.body);
+        const { email, password, username, ...otherData } = userSignupSchema.parse(req.body);
 
         const collectionName = `${project._id}_users`;
         const collection = mongoose.connection.db.collection(collectionName);
@@ -26,6 +28,7 @@ module.exports.signup = async (req, res) => {
             username,
             email,
             password: hashedPassword,
+            ...otherData,
             createdAt: new Date()
         };
 
@@ -45,6 +48,7 @@ module.exports.signup = async (req, res) => {
     } catch (err) {
         if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
         res.status(500).json({ error: err.message }); // Fixed: .json()
+        console.log(err)
     }
 }
 
@@ -90,17 +94,17 @@ module.exports.me = async (req, res) => {
             const collectionName = `${project._id}_users`;
             const collection = mongoose.connection.db.collection(collectionName);
 
-            const user = await collection.findOne({
-                _id: new mongoose.Types.ObjectId(decoded.userId)
-            });
+            const user = await collection.findOne(
+                { _id: new mongoose.Types.ObjectId(decoded.userId) },
+                { projection: { password: 0 } }
+            );
 
             if (!user) return res.status(404).json({ error: "User not found" });
 
-            const { password, ...userData } = user;
-            res.json(userData);
+            res.json(user);
 
         } catch (err) {
-            return res.status(400).json({ error: "Invalid or Expired Token" });
+            return res.status(401).json({ error: "Invalid or Expired Token" });
         }
 
     } catch (err) {

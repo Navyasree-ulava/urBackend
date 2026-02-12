@@ -28,7 +28,8 @@ module.exports = async (req, res, next) => {
                     databaseLimit
                     databaseUsed
                     storageLimit
-                    storageUsed
+                    storageUsed,
+                    jwtSecret
                 `)
                 .populate('owner', 'isVerified')
                 .lean();
