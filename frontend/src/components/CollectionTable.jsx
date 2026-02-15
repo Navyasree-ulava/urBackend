@@ -341,17 +341,17 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                                 onClick={() => setShowColumnMenu(false)}
                             />
                             <div
-  className="column-menu glass-panel"
-  style={{
-    position: 'absolute',
-    right: 0,
-    top: 'calc(100% + 6px)',
-    width: '220px',
-    maxHeight: '320px',
-    overflowY: 'auto',
-    zIndex: 100000,
-  }}
->
+                     className="column-menu glass-panel"
+                 style={{
+                       position: 'absolute',
+                         right: 0,
+                        top: 'calc(100% + 6px)',
+                        width: '220px',
+                         maxHeight: '320px',
+                          overflowY: 'auto',
+                           zIndex: 1000,
+                        }}
+                         >
 
 
                                 <div style={{
