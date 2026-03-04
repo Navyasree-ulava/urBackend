@@ -30,22 +30,27 @@ module.exports.createProject = async (req, res) => {
         // Validation Applied
         const { name, description } = createProjectSchema.parse(req.body);
 
-        const rawApiKey = generateApiKey()
-        const hashedkey = hashApiKey(rawApiKey);
+        const rawPublishableKey = generateApiKey('pk_live_');
+        const hashedPublishableKey = hashApiKey(rawPublishableKey);
 
-        const rawSecret = generateApiKey()
+        const rawSecretKey = generateApiKey('sk_live_');
+        const hashedSecretKey = hashApiKey(rawSecretKey);
+
+        const rawJwtSecret = generateApiKey('jwt_');
 
         const newProject = new Project({
             name,
             description,
             owner: req.user._id,
-            apiKey: hashedkey,
-            jwtSecret: rawSecret
+            publishableKey: hashedPublishableKey,
+            secretKey: hashedSecretKey,
+            jwtSecret: rawJwtSecret
         });
         await newProject.save();
 
         const projectObj = newProject.toObject();
-        projectObj.apiKey = rawApiKey;
+        projectObj.publishableKey = rawPublishableKey;
+        projectObj.secretKey = rawSecretKey;
         delete projectObj.jwtSecret;
 
         res.status(201).json(projectObj);
@@ -74,14 +79,15 @@ module.exports.getSingleProject = async (req, res) => {
         project = await getProjectById(req.params.projectId);
         let projectObj;
         if (!project) {
-            project = await Project.findOne({ _id: req.params.projectId, owner: req.user._id }).select('-apiKey -jwtSecret');
+            project = await Project.findOne({ _id: req.params.projectId, owner: req.user._id }).select('-publishableKey -secretKey -jwtSecret');
             if (!project) return res.status(404).json({ error: "Project not found." });
             projectObj = project.toObject();
             await setProjectById(req.params.projectId, project);
         }
 
         projectObj = project;
-        delete projectObj.apiKey;
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
         delete projectObj.jwtSecret;
         res.json(projectObj);
     } catch (err) {
@@ -91,25 +97,38 @@ module.exports.getSingleProject = async (req, res) => {
 
 module.exports.regenerateApiKey = async (req, res) => {
     try {
-        const newApiKey = generateApiKey();
+        const { keyType } = req.body; // 'publishable' or 'secret'
+        
+        if (keyType !== 'publishable' && keyType !== 'secret') {
+            return res.status(400).json({ error: "Invalid keyType. Must be 'publishable' or 'secret'." });
+        }
+
+        const prefix = keyType === 'publishable' ? 'pk_live_' : 'sk_live_';
+        const newApiKey = generateApiKey(prefix);
         const hashed = hashApiKey(newApiKey);
 
-        const oldApiProj = await Project.findOne({ _id: req.params.projectId, owner: req.user._id }).select('apiKey');
+        const oldApiProj = await Project.findOne({ _id: req.params.projectId, owner: req.user._id })
+            .select('publishableKey secretKey');
         if (!oldApiProj) return res.status(404).json({ error: "Project not found." });
-        await deleteProjectByApiKeyCache(oldApiProj.apiKey);
+        
+        // Clear caches for both keys to be safe
+        await deleteProjectByApiKeyCache(oldApiProj.publishableKey);
+        await deleteProjectByApiKeyCache(oldApiProj.secretKey);
 
+        const updateField = keyType === 'publishable' ? { publishableKey: hashed } : { secretKey: hashed };
 
         const project = await Project.findOneAndUpdate(
             { _id: req.params.projectId, owner: req.user._id },
-            { $set: { apiKey: hashed } },
+            { $set: updateField },
             { new: true }
         );
         if (!project) return res.status(404).json({ error: "Project not found." });
 
         const projectObj = project.toObject();
-        delete projectObj.apiKey;
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
         delete projectObj.jwtSecret;
-        res.json({ apiKey: newApiKey, project: projectObj });
+        res.json({ apiKey: newApiKey, keyType, project: projectObj });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -263,11 +282,12 @@ module.exports.createCollection = async (req, res) => {
 
         await deleteProjectById(projectId);
         await setProjectById(projectId, project);
-        await deleteProjectByApiKeyCache(project.apiKey);
-        await deleteProjectByApiKeyCache(project.apiKey);
+        await deleteProjectByApiKeyCache(project.publishableKey);
+        await deleteProjectByApiKeyCache(project.secretKey);
         // Safe Response
         const projectObj = project.toObject();
-        delete projectObj.apiKey;
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
         delete projectObj.jwtSecret;
 
         res.status(201).json(projectObj);
@@ -667,7 +687,38 @@ module.exports.updateProject = async (req, res) => {
             { new: true }
         );
         if (!project) return res.status(404).json({ error: "Project not found." });
+        
+        await deleteProjectById(project._id.toString());
+        await setProjectById(project._id.toString(), project);
+        
         res.json(project);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
+module.exports.updateAllowedDomains = async (req, res) => {
+    try {
+        const { domains } = req.body;
+        if (!Array.isArray(domains)) {
+            return res.status(400).json({ error: "domains must be an array of strings." });
+        }
+
+        const project = await Project.findOneAndUpdate(
+            { _id: req.params.projectId, owner: req.user._id },
+            { $set: { allowedDomains: domains } },
+            { new: true }
+        );
+
+        if (!project) return res.status(404).json({ error: "Project not found or access denied." });
+
+        // Update the cache so the verifyApiKey middleware gets the fresh domains immediately
+        await deleteProjectById(project._id.toString());
+        await setProjectById(project._id.toString(), project);
+        await deleteProjectByApiKeyCache(project.publishableKey);
+        await deleteProjectByApiKeyCache(project.secretKey);
+
+        res.json({ message: "Allowed domains updated", allowedDomains: project.allowedDomains });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
