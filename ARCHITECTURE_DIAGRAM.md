@@ -39,7 +39,7 @@ graph TB
 
         subgraph Controllers["🧩 Controllers"]
             C_AUTH["auth.controller\nregister / login\nchange-password / delete\nsendOtp / verifyOtp"]
-            C_PROJ["project.controller\ncreateProject / updateProject\ncreatCollection / deleteCollection\ngetData / insertData / editRow\ndeleteRow / uploadFile / listFiles\ndeleteFile / analytics\nupdateExternalConfig"]
+            C_PROJ["project.controller\ncreateProject / updateProject\ncreateCollection / deleteCollection\ngetData / insertData / editRow\ndeleteRow / uploadFile / listFiles\ndeleteFile / analytics\nupdateExternalConfig"]
             C_DATA["data.controller\ninsertData / getAllData\ngetSingleDoc / updateSingleData\ndeleteSingleDoc"]
             C_UAUTH["userAuth.controller\nsignup / login / me"]
             C_STORE["storage.controller\nuploadFile / deleteFile\ndeleteAllFiles"]
