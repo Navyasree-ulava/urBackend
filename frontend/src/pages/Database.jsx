@@ -282,6 +282,7 @@ export default function Database() {
         project={project}
         navigate={navigate}
         projectId={projectId}
+        showUsers={activeCollection?.name === 'users'}
         onRequestDelete={setCollectionToDelete}
       />
 

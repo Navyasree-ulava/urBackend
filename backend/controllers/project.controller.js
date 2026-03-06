@@ -104,6 +104,11 @@ module.exports.getSingleProject = async (req, res) => {
             await setProjectById(req.params.projectId, projectObj);
         }
 
+        // Ownership Check (Even for Cache)
+        if (projectObj.owner.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: "Access denied." });
+        }
+
         // Just to be safe, we remove sensitive fields again even if from cache
         delete projectObj.publishableKey;
         delete projectObj.secretKey;
@@ -840,7 +845,8 @@ module.exports.deleteProject = async (req, res) => {
 module.exports.analytics = async (req, res) => {
     try {
         const { projectId } = req.params;
-        const project = await Project.findOne({ _id: projectId });
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        if (!project) return res.status(404).json({ error: "Project not found or access denied." });
         const totalRequests = await Log.countDocuments({ projectId });
         const logs = await Log.find({ projectId }).sort({ timestamp: -1 }).limit(50);
 
@@ -880,14 +886,35 @@ module.exports.toggleAuth = async (req, res) => {
         if (!project) return res.status(404).json({ error: "Project not found" });
 
         project.isAuthEnabled = !!enable;
-
         await project.save();
-        await deleteProjectById(project._id); // Clear cache so frontend gets updated isAuthEnabled
+
+        // 1. CLEAR CACHE (Robustly)
+        await deleteProjectById(projectId);
+        await deleteProjectByApiKeyCache(project.publishableKey);
+        await deleteProjectByApiKeyCache(project.secretKey);
+
+        // 2. SANITIZE RETURN DATA
+        const projectObj = project.toObject();
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
+        delete projectObj.jwtSecret;
+
+        if (projectObj.collections && Array.isArray(projectObj.collections)) {
+            projectObj.collections = projectObj.collections.map(col => {
+                if (col.name === 'users' && col.model) {
+                    return {
+                        ...col,
+                        model: col.model.filter(m => m.key !== 'password')
+                    };
+                }
+                return col;
+            });
+        }
 
         res.json({ 
             message: `Authentication ${project.isAuthEnabled ? 'enabled' : 'disabled'} successfully`, 
             isAuthEnabled: project.isAuthEnabled,
-            project: project
+            project: projectObj
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

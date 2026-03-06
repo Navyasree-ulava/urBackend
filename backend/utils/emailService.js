@@ -127,7 +127,16 @@ async function sendReleaseEmail(email, { version, title, content }) {
 }
 
 async function sendAuthOtpEmail(email, { otp, type, pname }) {
-    pname = pname || "urBackend";
+    // 1. SANITIZE PNAME
+    const sPname = pname ? escapeHtml(pname) : "urBackend";
+    
+    // 2. DERIVE SAFE EMAIL HANDLE
+    let safeEmailHandle = sPname.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    if (!safeEmailHandle || safeEmailHandle.length < 3) {
+        safeEmailHandle = "no-reply-urbackend";
+    }
+    safeEmailHandle = safeEmailHandle.substring(0, 30); // Truncate
+    
     const isVerify = type === 'verification';
     const subject = isVerify ? "Verify your account" : "Reset your password";
     const header = isVerify ? "Verify your email address" : "Reset your password";
@@ -153,7 +162,7 @@ async function sendAuthOtpEmail(email, { otp, type, pname }) {
             </head>
             <body>
                 <div class="container">
-                    <div class="logo">${pname}</div>
+                    <div class="logo">${safeEmailHandle}</div>
                     <h1>${header}</h1>
                     <div class="content">
                         ${desc} This code will expire in 5 minutes.
@@ -170,14 +179,14 @@ async function sendAuthOtpEmail(email, { otp, type, pname }) {
             </html>
         `;
 
-        const safeEmailHandle = pname.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
 
         const { data, error } = await resend.emails.send({
-            from: `${pname} <${safeEmailHandle}.urbackend@apps.bitbros.in>`,
+            from: `${sPname} <${safeEmailHandle}.urbackend@apps.bitbros.in>`,
             to: email,
             subject: subject,
             html: htmlContent,
-            replyTo: `${pname} <${safeEmailHandle}.urbackend@apps.bitbros.in>`,
+            replyTo: `${sPname} <${safeEmailHandle}.urbackend@apps.bitbros.in>`,
         });
 
         if (error) {

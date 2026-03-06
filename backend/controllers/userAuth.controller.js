@@ -6,6 +6,13 @@ const Project = require('../models/Project');
 const redis = require('../config/redis');
 const { authEmailQueue } = require('../queues/authEmailQueue');
 const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema } = require('../utils/input.validation');
+const { getConnection } = require('../utils/connection.manager');
+
+async function getAuthCollection(project) {
+    const connection = await getConnection(project._id);
+    const collectionName = project.resources?.db?.isExternal ? "users" : `${project._id}_users`;
+    return connection.db.collection(collectionName);
+}
 
 module.exports.signup = async (req, res) => {
     try {
@@ -16,8 +23,7 @@ module.exports.signup = async (req, res) => {
         // Zod Validation (Prevents NoSQL Injection too)
         const { email, password, username, ...otherData } = userSignupSchema.parse(req.body);
 
-        const collectionName = `${project._id}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
 
         const existingUser = await collection.findOne({ email });
         if (existingUser) {
@@ -78,8 +84,7 @@ module.exports.login = async (req, res) => {
         // Validate Input
         const { email, password } = loginSchema.parse(req.body);
 
-        const collectionName = `${project._id}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
 
         const user = await collection.findOne({ email });
         if (!user) return res.status(400).json({ error: "Invalid email or password" });
@@ -111,8 +116,7 @@ module.exports.me = async (req, res) => {
 
         try {
             const decoded = jwt.verify(token, project.jwtSecret);
-            const collectionName = `${project._id}_users`;
-            const collection = mongoose.connection.db.collection(collectionName);
+            const collection = await getAuthCollection(project);
 
             const user = await collection.findOne(
                 { _id: new mongoose.Types.ObjectId(decoded.userId) },
@@ -142,8 +146,7 @@ module.exports.createAdminUser = async (req, res) => {
         const parsedData = userSignupSchema.parse(req.body);
         const { email, password, username, ...otherData } = parsedData;
 
-        const collectionName = `${project._id}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
 
         const existingUser = await collection.findOne({ email });
         if (existingUser) {
@@ -191,8 +194,7 @@ module.exports.resetPassword = async (req, res) => {
             return res.status(400).json({ error: "Password must be at least 6 characters" });
         }
 
-        const collectionName = `${project._id}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
@@ -227,8 +229,7 @@ module.exports.verifyEmail = async (req, res) => {
             return res.status(400).json({ error: "Invalid or expired OTP" });
         }
 
-        const collectionName = `${project._id}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
 
         const result = await collection.updateOne(
             { email },
@@ -251,8 +252,7 @@ module.exports.requestPasswordReset = async (req, res) => {
         const project = req.project;
         const { email } = onlyEmailSchema.parse(req.body);
 
-        const collectionName = `${project._id}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
         
         const user = await collection.findOne({ email });
         if (!user) {
@@ -286,8 +286,7 @@ module.exports.resetPasswordUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        const collectionName = `${project._id}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
 
         const result = await collection.updateOne(
             { email },
@@ -317,8 +316,7 @@ module.exports.updateProfile = async (req, res) => {
         const username = req.body.username;
         if (!username || username.length < 3) return res.status(400).json({ error: "Username must be at least 3 characters." });
 
-        const collectionName = `${project._id}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
 
         const result = await collection.updateOne(
             { _id: new mongoose.Types.ObjectId(decoded.userId) },
@@ -343,8 +341,7 @@ module.exports.changePasswordUser = async (req, res) => {
 
         const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 
-        const collectionName = `${project._id}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
 
         const user = await collection.findOne({ _id: new mongoose.Types.ObjectId(decoded.userId) });
         if (!user) return res.status(404).json({ error: "User not found" });
@@ -373,8 +370,10 @@ module.exports.getUserDetails = async (req, res) => {
     try {
         const { projectId, userId } = req.params;
 
-        const collectionName = `${projectId}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        if (!project) return res.status(404).json({ error: "Project not found or access denied." });
+
+        const collection = await getAuthCollection(project);
 
         const user = await collection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
         if (!user) return res.status(404).json({ error: "User not found" });
@@ -394,12 +393,14 @@ module.exports.updateAdminUser = async (req, res) => {
         const { projectId, userId } = req.params;
         const updateData = req.body;
 
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        if (!project) return res.status(404).json({ error: "Project not found or access denied." });
+
         // Prevent admin from inadvertently changing password hash directly from this endpoint
         delete updateData.password;
         delete updateData._id;
 
-        const collectionName = `${projectId}_users`;
-        const collection = mongoose.connection.db.collection(collectionName);
+        const collection = await getAuthCollection(project);
 
         const result = await collection.updateOne(
             { _id: new mongoose.Types.ObjectId(userId) },

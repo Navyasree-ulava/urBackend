@@ -8,11 +8,14 @@ const authEmailQueue = new Queue('auth-email-queue', { connection });
 // Initialize Worker with Rate Limiting
 const worker = new Worker('auth-email-queue', async (job) => {
     const { email, otp, type, pname } = job.data;
+    const redact = (e) => e.replace(/(.{2})(.*)(?=@)/, (gp1, gp2, gp3) => gp2 + "*".repeat(gp3.length));
+    const maskedEmail = redact(email);
+
     try {
-        console.log(`[Queue] Processing ${type} email for: ${email}`);
+        console.log(`[Queue] Processing ${type} email for: ${maskedEmail}`);
         await sendAuthOtpEmail(email, { otp, type, pname});
     } catch (error) {
-        console.error(`[Queue] Failed to send auth email to ${email}:`, error);
+        console.error(`[Queue] Failed to send auth email to ${maskedEmail}:`, error);
         throw error;
     }
 }, {

@@ -11,9 +11,19 @@ import { API_URL } from '../config';
 const DynamicUserForm = ({ schema, formData, onChange, isEdit = false }) => {
     if (!schema) return null;
 
+    const baseFields = isEdit ? [] : [
+        { key: 'email', type: 'String', required: true },
+        { key: 'username', type: 'String', required: false },
+        { key: 'password', type: 'String', required: true }
+    ];
+
+    // Filter out base fields from schema if they already exist to avoid duplicates
+    const dynamicFields = (schema || []).filter(f => !baseFields.find(b => b.key === f.key));
+    const allFields = [...baseFields, ...dynamicFields];
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-            {schema.map((field) => {
+            {allFields.map((field) => {
                 // Skip password in edit mode (we have a separate reset)
                 if (isEdit && field.key === 'password') return null;
                 // Skip internal fields if any

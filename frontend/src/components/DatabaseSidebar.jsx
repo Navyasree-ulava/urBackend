@@ -15,9 +15,10 @@ export default function DatabaseSidebar({
     project,
     navigate,
     projectId,
+    showUsers = false,
     onRequestDelete
 }) {
-    const visibleCollections = collections.filter(c => c.name !== 'users' || activeCollection?.name === 'users');
+    const visibleCollections = collections.filter(c => c.name !== 'users' || showUsers);
 
     return (
         <aside className={`db-sidebar ${isSidebarOpen ? "open" : ""}`}>

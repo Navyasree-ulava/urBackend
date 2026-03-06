@@ -127,11 +127,14 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                     type="text"
                     placeholder="field_name"
                     value={field.key}
+                    disabled={field.locked}
                     onChange={(e) => handleChange('key', e.target.value)}
                     className="input-field"
                     style={{
                         flex: 2, border: 'none', background: 'transparent',
-                        padding: '4px 0', fontSize: '0.9rem'
+                        padding: '4px 0', fontSize: '0.9rem',
+                        opacity: field.locked ? 0.6 : 1,
+                        cursor: field.locked ? 'not-allowed' : 'text'
                     }}
                 />
 
@@ -165,8 +168,15 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                 <button
                     type="button"
                     onClick={() => onRemove(index)}
+                    disabled={field.locked}
                     className="btn btn-ghost"
-                    style={{ color: 'var(--color-text-muted)', padding: '4px', flexShrink: 0 }}
+                    style={{ 
+                        color: 'var(--color-text-muted)', 
+                        padding: '4px', 
+                        flexShrink: 0,
+                        opacity: field.locked ? 0.3 : 1,
+                        cursor: field.locked ? 'not-allowed' : 'pointer'
+                    }}
                 >
                     <Trash2 size={15} />
                 </button>
@@ -329,8 +339,8 @@ function CreateCollection() {
     const getInitialFields = () => {
         if (initialName === 'users') {
             return [
-                { ...createEmptyField(), key: 'email', type: 'String', required: true },
-                { ...createEmptyField(), key: 'password', type: 'String', required: true },
+                { ...createEmptyField(), key: 'email', type: 'String', required: true, locked: true },
+                { ...createEmptyField(), key: 'password', type: 'String', required: true, locked: true },
                 { ...createEmptyField(), key: 'username', type: 'String', required: false },
                 { ...createEmptyField(), key: 'emailVerified', type: 'Boolean', required: false },
             ];
@@ -382,6 +392,15 @@ function CreateCollection() {
 
         if (!name) return toast.error("Collection name is required");
         if (fields.some(f => !f.key)) return toast.error("All fields must have a name");
+
+        // ENFORCE USERS SCHEMA
+        if (name === 'users') {
+            const hasEmail = fields.find(f => f.key === 'email' && f.type === 'String' && f.required);
+            const hasPassword = fields.find(f => f.key === 'password' && f.type === 'String' && f.required);
+            if (!hasEmail || !hasPassword) {
+                return toast.error("The 'users' collection MUST have 'email' and 'password' as required String fields.");
+            }
+        }
 
         setLoading(true);
         try {
