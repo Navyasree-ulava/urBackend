@@ -1,3 +1,4 @@
+// FUNCTION - LOAD PROJECT FOR ADMIN (MIDDLEWARE)
 const Project = require('../models/Project');
 
 module.exports = async (req, res, next) => {

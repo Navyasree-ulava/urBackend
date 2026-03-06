@@ -8,7 +8,7 @@ import { API_URL } from '../config';
 
 const MAX_DEPTH = 3;
 
-// Generate a stable unique ID for React keys
+// FUNCTION - NEXT FIELD ID
 let _fieldIdCounter = 0;
 const nextFieldId = () => `field_${Date.now()}_${_fieldIdCounter++}`;
 
@@ -20,7 +20,7 @@ function createEmptyField() {
     return { _id: nextFieldId(), key: '', type: 'String', required: false };
 }
 
-// Recursive FieldRow component
+// FUNCTION - FIELD ROW COMPONENT
 function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
     const [expanded, setExpanded] = useState(true);
 
@@ -60,7 +60,6 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
         onChange(index, { ...field, fields: newFields });
     };
 
-    // Array items sub-field handlers
     const handleItemsChange = (prop, value) => {
         const updatedItems = { ...field.items, [prop]: value };
         if (prop === 'type') {
@@ -101,7 +100,6 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
 
     return (
         <div style={{ marginLeft: `${indent}px` }}>
-            {/* Main field row */}
             <div className="schema-field-row" style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '10px 12px', marginBottom: '4px',
@@ -315,7 +313,7 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
     );
 }
 
-// Strip internal _id fields before sending to API
+// FUNCTION - CLEAN FIELDS FOR API
 function cleanFieldsForApi(fields) {
     return fields.map(f => {
         const { _id, ...clean } = f;
@@ -328,6 +326,7 @@ function cleanFieldsForApi(fields) {
 }
 
 
+// FUNCTION - CREATE COLLECTION COMPONENT
 function CreateCollection() {
     const { projectId } = useParams();
     const navigate = useNavigate();
@@ -398,7 +397,6 @@ function CreateCollection() {
         if (!name) return toast.error("Collection name is required");
         if (fields.some(f => !f.key)) return toast.error("All fields must have a name");
 
-        // ENFORCE USERS SCHEMA
         if (name === 'users') {
             const hasEmail = fields.find(f => f.key === 'email' && f.type === 'String' && f.required);
             const hasPassword = fields.find(f => f.key === 'password' && f.type === 'String' && f.required);
@@ -468,7 +466,6 @@ function CreateCollection() {
                         </button>
                     </div>
 
-                    {/* Column header */}
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
                         padding: '6px 12px 6px 38px', marginBottom: '4px',

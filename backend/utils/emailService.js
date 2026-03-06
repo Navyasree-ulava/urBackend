@@ -126,22 +126,19 @@ async function sendReleaseEmail(email, { version, title, content }) {
     }
 }
 
+    // FUNCTION - SEND AUTH OTP EMAIL
 async function sendAuthOtpEmail(email, { otp, type, pname }) {
     const rawPname = pname || "urBackend";
 
-    // 1. DERIVE SAFE EMAIL HANDLE (Before HTML escaping)
     let safeEmailHandle = rawPname.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (safeEmailHandle.length < 3) {
-        safeEmailHandle = "no-reply-urbackend";
+        safeEmailHandle = "urbackend";
     }
-    safeEmailHandle = safeEmailHandle.substring(0, 30); // Truncate
+    safeEmailHandle = safeEmailHandle.substring(0, 30);
 
-    // 2. CREATE SAFE PROJECT NAME HTML (For use inside logo/HTML)
     const safeProjectNameHtml = escapeHtml(rawPname);
 
-    // 3. CREATE SAFE DISPLAY NAME (For email headers, stripping CR/LF)
     const safeDisplayName = rawPname.replace(/[\r\n]/g, '').trim();
-    // Quote if contains special characters to be safe for email headers
     const finalDisplayName = /^[a-zA-Z0-9 ]+$/.test(safeDisplayName) 
         ? safeDisplayName 
         : `"${safeDisplayName.replace(/"/g, '\\"')}"`;

@@ -6,8 +6,7 @@ import toast from 'react-hot-toast';
 import { Shield, Trash2, User, Search, Mail, UserPlus, Key, X, AlertCircle, Edit2, Save, Settings } from 'lucide-react';
 import { API_URL } from '../config';
 
-// --- Dynamic Form Component ---
-// Defined outside to prevent focus loss on re-renders
+// FUNCTION - DYNAMIC USER FORM
 const DynamicUserForm = ({ schema, formData, onChange, isEdit = false }) => {
     if (!schema) return null;
 
@@ -76,6 +75,7 @@ const DynamicUserForm = ({ schema, formData, onChange, isEdit = false }) => {
     );
 };
 
+// FUNCTION - AUTH COMPONENT
 export default function Auth() {
     const { projectId } = useParams();
     const { token } = useAuth();
@@ -89,16 +89,13 @@ export default function Auth() {
     const [isEnabling, setIsEnabling] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     
-    // Add User Form State
     const [addFormData, setAddFormData] = useState({ email: '', password: '', username: '' });
     const [isAdding, setIsAdding] = useState(false);
 
-    // User Editing State
-    const [editingUser, setEditingUser] = useState(null); // Full user object from admin endpoint
+    const [editingUser, setEditingUser] = useState(null);
     const [isUpdatingUser, setIsUpdatingUser] = useState(false);
     const [editFormData, setEditFormData] = useState({});
     
-    // Password Reset State
     const [isResetModalOpen, setIsResetModalOpen] = useState(false);
     const [resetTargetUser, setResetTargetUser] = useState(null);
     const [newPassVal, setNewPassVal] = useState('');
@@ -110,14 +107,12 @@ export default function Auth() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // 1. Fetch project details to check isAuthEnabled
                 const projRes = await axios.get(`${API_URL}/api/projects/${projectId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 
                 setProject(projRes.data);
 
-                // 2. Fetch users ONLY if auth is enabled
                 if (projRes.data.isAuthEnabled) {
                     try {
                         const usersRes = await axios.get(
@@ -141,6 +136,7 @@ export default function Auth() {
         if (token) fetchData();
     }, [projectId, token]);
 
+// PATCH REQ FOR TOGGLE AUTH
     const handleEnableAuth = async () => {
         setIsEnabling(true);
         try {
@@ -172,7 +168,7 @@ export default function Auth() {
         }
     };
 
-    // Handle Add User
+// POST REQ FOR ADD USER (ADMIN)
     const handleAddUser = async (e) => {
         if (e) e.preventDefault();
         setIsAdding(true);
@@ -194,13 +190,14 @@ export default function Auth() {
         }
     };
 
-    // Handle Reset Password (Trigger Modal)
+// FUNCTION - TRIGGER RESET MODAL
     const handleResetClick = (user) => {
         setResetTargetUser(user);
         setNewPassVal('');
         setIsResetModalOpen(true);
     };
 
+// PATCH REQ FOR CONFIRM RESET PASSWORD
     const confirmResetPassword = async (e) => {
         if (e) e.preventDefault();
         if (!newPassVal || newPassVal.length < 6) return toast.error("Password must be at least 6 characters");
@@ -222,7 +219,7 @@ export default function Auth() {
         }
     };
 
-    // Handle Fetch User for Editing
+// FUNCTION - FETCH USER FOR EDIT
     const handleEditClick = async (userId) => {
         try {
             const res = await axios.get(
@@ -230,7 +227,6 @@ export default function Auth() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setEditingUser(res.data);
-            // Convert everything except core fields to form data
             const customFields = { ...res.data };
             ['_id', 'email', 'password', 'emailVerified', 'createdAt', 'updatedAt'].forEach(key => { delete customFields[key]; });
             setEditFormData(customFields);
@@ -239,6 +235,7 @@ export default function Auth() {
         }
     };
 
+// PUT REQ FOR UPDATE USER (ADMIN)
     const handleUpdateUser = async () => {
         setIsUpdatingUser(true);
         try {
@@ -264,7 +261,7 @@ export default function Auth() {
         }
     };
 
-    // 2. Delete User
+// DELETE REQ FOR USER
     const handleDelete = async (id) => {
         if (!confirm("Delete this user permanently? They won't be able to login.")) return;
 
@@ -280,7 +277,7 @@ export default function Auth() {
         }
     };
 
-    // Filter Users
+    // FUNCTION - FILTER USERS
     const filteredUsers = users.filter(user =>
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user._id?.toLowerCase().includes(searchTerm.toLowerCase())

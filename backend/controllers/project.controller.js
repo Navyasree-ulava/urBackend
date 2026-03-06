@@ -309,6 +309,7 @@ module.exports.deleteExternalStorageConfig = async (req, res) => {
 
 
 
+// POST REQ FOR CREATE COLLECTION
 module.exports.createCollection = async (req, res) => {
     try {
         const { projectId, collectionName, schema } = createCollectionSchema.parse(req.body);
@@ -321,7 +322,6 @@ module.exports.createCollection = async (req, res) => {
 
         if (!project.jwtSecret) project.jwtSecret = uuidv4();
 
-        // ENFORCE USERS SCHEMA
         if (collectionName === 'users') {
             if (!validateUsersSchema(schema)) {
                 return res.status(422).json({ error: "The 'users' collection must have required 'email' and 'password' string fields." });
@@ -335,7 +335,6 @@ module.exports.createCollection = async (req, res) => {
         await setProjectById(projectId, project);
         await deleteProjectByApiKeyCache(project.publishableKey);
         await deleteProjectByApiKeyCache(project.secretKey);
-        // RESPONSE
         const projectObj = project.toObject();
         delete projectObj.publishableKey;
         delete projectObj.secretKey;
@@ -460,7 +459,6 @@ module.exports.insertData = async (req, res) => {
         if (!project.resources.db.isExternal) {
             project.databaseUsed = (project.databaseUsed || 0) + docSize;
         }
-        await project.save();
         await project.save();
 
         res.json(result);
@@ -891,6 +889,7 @@ module.exports.analytics = async (req, res) => {
     }
 }
 
+// FUNCTION - TOGGLE AUTH
 module.exports.toggleAuth = async (req, res) => {
     try {
         const { projectId } = req.params;
@@ -903,7 +902,6 @@ module.exports.toggleAuth = async (req, res) => {
         if (enable) {
             let usersCol = project.collections.find(c => c.name === 'users');
             if (!usersCol) {
-                // Auto-create users collection with default schema
                 usersCol = {
                     name: 'users',
                     model: [
@@ -915,7 +913,6 @@ module.exports.toggleAuth = async (req, res) => {
                 };
                 project.collections.push(usersCol);
             } else {
-                // Validate existing users schema
                 if (!validateUsersSchema(usersCol.model)) {
                     return res.status(422).json({ 
                         error: "Invalid Users Schema",
@@ -928,12 +925,10 @@ module.exports.toggleAuth = async (req, res) => {
         project.isAuthEnabled = !!enable;
         await project.save();
 
-        // 1. CLEAR CACHE (Robustly)
         await deleteProjectById(projectId);
         await deleteProjectByApiKeyCache(project.publishableKey);
         await deleteProjectByApiKeyCache(project.secretKey);
 
-        // 2. SANITIZE RETURN DATA
         const projectObj = project.toObject();
         delete projectObj.publishableKey;
         delete projectObj.secretKey;

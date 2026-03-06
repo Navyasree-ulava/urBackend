@@ -1,3 +1,4 @@
+// FUNCTION - CHECK AUTH ENABLED (MIDDLEWARE)
 module.exports = (req, res, next) => {
     const project = req.project;
 
@@ -8,7 +9,6 @@ module.exports = (req, res, next) => {
         });
     }
 
-    // Check if a 'users' collection schema has been defined by the developer
     const usersCollection = project.collections?.find(c => c.name === 'users');
     
     if (!usersCollection) {
@@ -18,7 +18,6 @@ module.exports = (req, res, next) => {
         });
     }
 
-    // ENFORCE SCHEMA CONTRACT
     const hasEmail = usersCollection.model.find(f => f.key === 'email' && f.type === 'String' && f.required);
     const hasPassword = usersCollection.model.find(f => f.key === 'password' && f.type === 'String' && f.required);
     
@@ -29,7 +28,6 @@ module.exports = (req, res, next) => {
         });
     }
 
-    // Attach the usersSchema to the request so controllers can use it for dynamic validation
     req.usersSchema = usersCollection.model;
     
     next();

@@ -8,19 +8,18 @@ const { authEmailQueue } = require('../queues/authEmailQueue');
 const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema } = require('../utils/input.validation');
 const { getConnection } = require('../utils/connection.manager');
 
+// FUNCTION - GET AUTH COLLECTION
 async function getAuthCollection(project) {
     const connection = await getConnection(project._id);
     const collectionName = project.resources?.db?.isExternal ? "users" : `${project._id}_users`;
     return connection.db.collection(collectionName);
 }
 
+// POST REQ FOR SIGNUP
 module.exports.signup = async (req, res) => {
     try {
         const project = req.project;
 
-        const data = userSignupSchema.parse(req.body);
-
-        // Zod Validation (Prevents NoSQL Injection too)
         const { email, password, username, ...otherData } = userSignupSchema.parse(req.body);
 
         const collection = await getAuthCollection(project);
@@ -33,7 +32,6 @@ module.exports.signup = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Generate OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
         const newUser = {
@@ -47,10 +45,8 @@ module.exports.signup = async (req, res) => {
 
         const result = await collection.insertOne(newUser);
 
-        // Save OTP to Redis (5 mins expiry)
         await redis.set(`project:${project._id}:otp:verification:${email}`, otp, 'EX', 300);
 
-        // Queue Email
         await authEmailQueue.add('send-verification-email', {
             email,
             otp,
@@ -78,10 +74,10 @@ module.exports.signup = async (req, res) => {
     }
 }
 
+// POST REQ FOR LOGIN
 module.exports.login = async (req, res) => {
     try {
         const project = req.project;
-        // Validate Input
         const { email, password } = loginSchema.parse(req.body);
 
         const collection = await getAuthCollection(project);
@@ -105,6 +101,7 @@ module.exports.login = async (req, res) => {
     }
 }
 
+// FUNCTION - GET CURRENT USER
 module.exports.me = async (req, res) => {
     try {
         const project = req.project;
@@ -136,7 +133,7 @@ module.exports.me = async (req, res) => {
     }
 }
 
-// ADMIN - Create User (from Dashboard)
+// POST REQ FOR ADMIN CREATE USER
 module.exports.createAdminUser = async (req, res) => {
     try {
         const { projectId } = req.params;
@@ -181,7 +178,7 @@ module.exports.createAdminUser = async (req, res) => {
     }
 }
 
-// ADMIN - Reset User Password (from Dashboard)
+// PATCH REQ FOR ADMIN RESET PASSWORD
 module.exports.resetPassword = async (req, res) => {
     try {
         const { projectId, userId } = req.params;
@@ -215,8 +212,7 @@ module.exports.resetPassword = async (req, res) => {
     }
 }
 
-// USER PROFILE ENDPOINTS
-
+// POST REQ FOR EMAIL VERIFICATION
 module.exports.verifyEmail = async (req, res) => {
     try {
         const project = req.project;
@@ -247,6 +243,7 @@ module.exports.verifyEmail = async (req, res) => {
     }
 };
 
+// POST REQ FOR PASSWORD RESET REQUEST
 module.exports.requestPasswordReset = async (req, res) => {
     try {
         const project = req.project;
@@ -271,6 +268,7 @@ module.exports.requestPasswordReset = async (req, res) => {
     }
 };
 
+// POST REQ FOR PASSWORD RESET CONFIRMATION
 module.exports.resetPasswordUser = async (req, res) => {
     try {
         const project = req.project;
@@ -304,6 +302,7 @@ module.exports.resetPasswordUser = async (req, res) => {
     }
 };
 
+// PATCH REQ FOR UPDATE PROFILE
 module.exports.updateProfile = async (req, res) => {
     try {
         const project = req.project;
@@ -332,6 +331,7 @@ module.exports.updateProfile = async (req, res) => {
     }
 };
 
+// POST REQ FOR CHANGE PASSWORD
 module.exports.changePasswordUser = async (req, res) => {
     try {
         const project = req.project;
@@ -367,7 +367,7 @@ module.exports.changePasswordUser = async (req, res) => {
     }
 };
 
-// ADMIN: GET USER DETAILS
+// FUNCTION - GET USER DETAILS (ADMIN)
 module.exports.getUserDetails = async (req, res) => {
     try {
         const { projectId, userId } = req.params;
@@ -380,7 +380,6 @@ module.exports.getUserDetails = async (req, res) => {
         const user = await collection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        // Remove password hash before returning
         const { password, ...safeUser } = user;
 
         res.json(safeUser);
@@ -389,7 +388,7 @@ module.exports.getUserDetails = async (req, res) => {
     }
 };
 
-// ADMIN: UPDATE CUSTOM USER FIELDS
+// PUT REQ FOR UPDATE ADMIN USER
 module.exports.updateAdminUser = async (req, res) => {
     try {
         const { projectId, userId } = req.params;
@@ -398,7 +397,6 @@ module.exports.updateAdminUser = async (req, res) => {
         const project = await Project.findOne({ _id: projectId, owner: req.user._id });
         if (!project) return res.status(404).json({ error: "Project not found or access denied." });
 
-        // Prevent admin from inadvertently changing password hash directly from this endpoint
         delete updateData.password;
         delete updateData._id;
 
