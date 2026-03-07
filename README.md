@@ -1,10 +1,12 @@
 # urBackend 🚀
+
 <p align="center">
   <img src="banner.png" alt="urBackend Banner" width="100%" />
 </p>
+
 <p align="center">
-  <b>Bring your own MongoDB. Get a production-ready backend in 60 seconds.</b><br/>
-  <i>your backend — your database — your rules.</i>
+  <b>The Instant Backend-as-a-Service for Frontend Developers.</b><br/>
+  <i>Bring your own MongoDB. Get a production-ready backend in 60 seconds.</i>
 </p>
 
 <p align="center">
@@ -24,55 +26,72 @@
 
 ---
 
-urBackend is an **Open-Source BaaS** built to eliminate the complexity of backend management. It provides everything you need to power your next big idea—accessible via a unified REST API.
+## 💡 Why urBackend?
 
-## 🟢 Powerful Features
+Building a backend is slow, repetitive, and expensive. urBackend flips the script by giving you **full control** without the **boilerplate**.
 
-- `>_` **Instant NoSQL Database**: Create collections and push JSON data instantly.
-- `>_` **Managed Authentication**: Sign Up, Login, and Profile management with JWT.
-- `>_` **Cloud Storage**: Managed file/image uploads with public CDN links.
-- `>_` **Bring Your Own Database**: Connect your own MongoDB or Supabase instance.
-- `>_` **Real-time Analytics**: Monitor traffic and resource usage from a premium dashboard.
-- `>_` **Secure Architecture**: Dual-key separation (`pk_live` & `sk_live`) for total safety.
+- **No Vendor Lock-in**: Connect your own MongoDB Atlas or self-hosted instance. Your data, your rules.
+- **Speed to Production**: Go from zero to a live, secure REST API in under 60 seconds.
+- **Frontend First**: Designed specifically to match the mental model of frontend developers.
+- **Scalable by Design**: Built on industrial-strength tech (Node.js, Redis, BullMQ) to handle your growth.
 
 ---
 
-## 🚀 Experience the Pulse
+## 🟢 Powerful Features
 
-Go from zero to a live backend in **under 60 seconds**.
+| Feature | Description |
+| :--- | :--- |
+| 🗄️ **Instant NoSQL** | Auto-generated REST APIs for your MongoDB collections. |
+| 🔐 **Managed Auth** | Built-in Signup, Login, and JWT session management. |
+| ☁️ **Cloud Storage** | Manage media assets with instant public CDN links. |
+| 🔌 **BYO Database** | Already have data? Plug in your existing MongoDB cluster. |
+| 🛡️ **Dual-Key Safety** | Separate Public/Secret keys for secure frontend/backend access. |
+| 📊 **Real-time Analytics** | Monitor requests, storage, and health from a beautiful UI. |
 
-1.  **Initialize**: Create a project on the [Dashboard](https://urbackend.bitbros.in).
-2.  **Model**: Visually define your collections and schemas.
-3.  **Execute**: Push and pull data immediately using your Instant API Key.
+---
 
+## 🚀 How it Works
+
+```mermaid
+graph LR
+    A[1. Link DB] --> B[2. Define Schema]
+    B --> C[3. 🚀 Ship Fast]
+```
+
+1.  **Initialize**: Create a project and link your MongoDB URI in the [Dashboard](https://urbackend.bitbros.in).
+2.  **Model**: Visually define your collections and schemas—validation is handled automatically.
+3.  **Execute**: Start hitting your auto-generated endpoints immediately.
+
+### One-line Integration
 ```javascript
-// Power your UI with zero backend boilerplate
-const res = await fetch('https://api.urbackend.bitbros.in/api/data/products', {
-  headers: { 'x-api-key': 'your_pk_live_key' }
+// Instant CRUD for any collection
+const users = await fetch('https://api.urbackend.bitbros.in/api/data/users', {
+  headers: { 'x-api-key': 'pk_live_...' }
 });
 ```
 
 ---
 
-## 🛠️ Infrastructure
+## 🛠️ Tech Stack
 
-<div align="center">
+urBackend is built with a focus on performance and reliability:
 
-| **Core System** | **Developer UI** | **Data Layer** |
-| :--- | :--- | :--- |
-| Node.js & Express | React.js (Vite) | MongoDB (Mongoose) |
-| JWT Authentication | Lucide React | Redis & BullMQ |
-| Storage Manager | Recharts | Supabase (BYOD) |
-
-</div>
+- **Runtime**: Node.js & Express
+- **State/Queue**: Redis & BullMQ
+- **Data Layer**: MongoDB (Mongoose)
+- **Frontend**: React.js (Vite)
+- **Styling**: Vanilla CSS & Lucide Icons
+- **Deployment**: Integrated CI/CD via GitHub Actions
 
 ---
 
 ## 🤝 Community
 
-- [GitHub Issues](https://github.com/yash-pouranik/urbackend/issues): Report bugs & request features.
-- [Discord Channel](https://discord.gg/CXJjvJkNWn): Join the conversation.
-- [Contributing](CONTRIBUTING.md): Help us grow the ecosystem.
+We are building a community of faster builders. Join us!
+
+- **Join the Discord**: [discord.gg/CXJjvJkNWn](https://discord.gg/CXJjvJkNWn)
+- **Report Bugs**: [GitHub Issues](https://github.com/yash-pouranik/urbackend/issues)
+- **Contribute**: Check out our [Contributing Guide](CONTRIBUTING.md)
 
 ---
 
