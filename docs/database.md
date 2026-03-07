@@ -41,6 +41,7 @@ await fetch('https://api.urbackend.bitbros.in/api/data/posts', {
 urBackend uses `$set` logic, meaning you only need to send the fields you want to change.
 
 ```javascript
+const postId = "YOUR_DOCUMENT_ID";
 await fetch(`https://api.urbackend.bitbros.in/api/data/posts/${postId}`, {
   method: 'PUT',
   headers: { 'Content-Type': 'application/json', 'x-api-key': 'YOUR_KEY' },
