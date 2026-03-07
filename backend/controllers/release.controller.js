@@ -20,7 +20,8 @@ exports.createRelease = async (req, res) => {
     try {
         const { version, title, content } = req.body;
 
-        if (req.user.email !== ADMIN_EMAIL) {
+        const dev = await Developer.findById(req.user._id);
+        if (!dev || dev.email !== ADMIN_EMAIL) {
             return res.status(403).json({ error: "Access denied. Admin only." });
         }
 
@@ -32,7 +33,7 @@ exports.createRelease = async (req, res) => {
             version, 
             title, 
             content,
-            publishedBy: req.user.email
+            publishedBy: dev.email
         });
         await newRelease.save();
         const developers = await Developer.find({ isVerified: true })
