@@ -1,235 +1,171 @@
 # 🐦 X.com Clone - Built on urBackend
 
 <p align="center">
-  <img src="https://img.shields.io/badge/React-19.2-blue" />
-  <img src="https://img.shields.io/badge/TailwindCSS-3.0-38bdf8" />
-  <img src="https://img.shields.io/badge/urBackend-API-1DA1F2" />
+  <img src="https://img.shields.io/badge/React-19.2-blue?style=for-the-badge&logo=react" />
+  <img src="https://img.shields.io/badge/TailwindCSS-3.0-38bdf8?style=for-the-badge&logo=tailwind-css" />
+  <img src="https://img.shields.io/badge/urBackend-API-1DA1F2?style=for-the-badge" />
 </p>
 
-A **full-fledged X.com (Twitter) clone** built entirely on urBackend APIs. No backend code needed - just pure frontend magic powered by urBackend's BaaS platform!
+A **full-featured X.com (Twitter) clone** built entirely on the **urBackend** BaaS platform. This project demonstrates how to build complex social features like infinite scroll, multi-image uploads, and social graphs without writing a custom backend.
+
+---
 
 ## ✨ Features
 
-- ✅ **Authentication** - Secure JWT-based login/signup
-- ✅ **Post Creation** - Text + multi-image uploads (up to 4 images)
-- ✅ **Social Interactions** - Like, comment, and engage
-- ✅ **Follow System** - Build your network
-- ✅ **User Profiles** - Customizable profiles with bio, avatar, banner
-- ✅ **Feed Timeline** - Infinite scroll home feed
-- ✅ **Explore Page** - Discover trending posts
-- ✅ **Search** - Find users instantly
-- ✅ **Real-time Updates** - Auto-refresh feed every 30s
-- ✅ **Responsive Design** - Works on all devices
-- ✅ **Dark Mode** - Easy on the eyes
+- 🔐 **Authentication** - Secure JWT-based login/signup powered by urBackend Auth.
+- 📝 **Tweet Composer** - Text + multi-image uploads (up to 4 images) with previews.
+- ❤️ **Social Interactions** - Like, comment, and retweet (coming soon) capabilities.
+- 👥 **Relationship Graph** - Real-time Follow/Unfollow system.
+- 👤 **Rich Profiles** - Custom avatars, banners, bios, and verified badges.
+- 📜 **Home Timeline** - Infinite scrolling feed with optimistic UI updates.
+- 🔍 **Explore & Search** - Find users and discover new content.
+- 🌓 **Theming** - Full support for Light and Dark modes.
+- 📱 **Responsive** - Optimized for mobile, tablet, and desktop.
+
+---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-1. **urBackend Account** - Sign up at https://urbackend.bitbros.in
-2. **MongoDB Connected** - Link your MongoDB database
-3. **API Keys** - Get your `pk_live_*` and `sk_live_*` keys
+### 1. Prerequisites
+- **urBackend Account**: [Sign up here](https://urbackend.bitbros.in)
+- **Node.js**: v18+ installed locally
+- **MongoDB**: A MongoDB connection string linked to your urBackend project
 
-### Installation
-
+### 2. Installation
 ```bash
-# Clone the repo
-git clone <repo-url>
+# Clone the repository
+git clone https://github.com/yash-pouranik/urBackend.git
 cd examples/social-demo
 
-# Install client dependencies
-cd client
-npm install
-
-# Install server dependencies
-cd ../server
-npm install
+# Install dependencies for both Client and Proxy Server
+cd client && npm install
+cd ../server && npm install
 ```
 
-### Configuration
+### 3. urBackend Project Configuration
 
-#### 1. Create Collections in urBackend Dashboard
+#### **Step A: Enable Authentication**
+In your urBackend Dashboard, go to **Settings** and **Enable Authentication**. This automatically creates the `users` collection with secure password hashing.
 
-> **⚠️ IMPORTANT**: First, enable **Authentication** in your urBackend project settings. This automatically creates the `users` collection with required `email` and `password` fields.
+#### **Step B: Create Collections**
+Create the following collections in your dashboard with these exact schemas:
 
-📖 **Detailed Guide**: See [COLLECTIONS_GUIDE.md](./COLLECTIONS_GUIDE.md) for step-by-step visual instructions
+**1. `users` (Extend the auto-created collection)**
+Add these extra fields to the `users` schema:
+```json
+{
+  "username": { "type": "String", "required": true, "unique": true },
+  "displayName": { "type": "String" },
+  "bio": { "type": "String" },
+  "avatar": { "type": "String" },
+  "banner": { "type": "String" },
+  "verified": { "type": "Boolean", "default": false },
+  "followersCount": { "type": "Number", "default": 0 },
+  "followingCount": { "type": "Number", "default": 0 }
+}
+```
 
-You need to create 5 collections:
+**2. `posts`**
+```json
+{
+  "authorId": { "type": "String", "required": true },
+  "authorUsername": { "type": "String", "required": true },
+  "content": { "type": "String", "required": true },
+  "images": { "type": "Array", "default": [] },
+  "likesCount": { "type": "Number", "default": 0 },
+  "commentsCount": { "type": "Number", "default": 0 }
+}
+```
 
-**Required collections:**
-- ✅ `users` (auto-created when you enable authentication) 
-  - **Auto fields**: `email`, `password`
-  - **You add**: `username`, `displayName`, `bio`, `avatar`, etc.
-- 📝 `posts` - for tweets/posts
-- 💬 `comments` - for replies
-- ❤️ `likes` - for like tracking
-- 👥 `follows` - for follow relationships
+**3. `comments`**, **4. `likes`**, and **5. `follows`** (See [full schema definitions](#-detailed-schema-reference) below).
 
-**Quick steps:**
-1. ✅ Enable Authentication in dashboard (creates `users` with `email` & `password`)
-2. ➕ Add extra fields to `users`: `username`, `displayName`, `bio`, `avatar`, etc.
-3. Create `posts`, `comments`, `likes`, `follows` collections manually
+### 4. Environment Setup
 
-Full schemas in [SETUP.md](./SETUP.md).
-
-#### 2. Environment Variables
-
-**Client** - Create `client/.env`:
+**Client (`client/.env`)**
 ```env
-VITE_PUBLIC_KEY=pk_live_your_public_key_here
+VITE_PUBLIC_KEY=pk_live_your_key_here
 VITE_API_URL=https://api.ub.bitbros.in
 VITE_PROXY_URL=http://localhost:4000/api/proxy
 ```
 
-**Server** - Create `server/.env`:
+**Server (`server/.env`)**
 ```env
-API_KEY=sk_live_your_secret_key_here
+API_KEY=sk_live_your_key_here
 PORT=4000
 ```
 
-### Run the App
-
+### 5. Run the Application
 ```bash
-# Terminal 1 - Start proxy server
-cd server
-npm start
+# Terminal 1: Start Proxy Server
+cd server && npm start
 
-# Terminal 2 - Start React app
-cd client
-npm run dev
+# Terminal 2: Start React App
+cd client && npm run dev
 ```
-
-Visit **http://localhost:5173** and start tweeting! 🐦
-
-## 📁 Project Structure
-
-```
-social-demo/
-├── client/                    # React frontend
-│   ├── src/
-│   │   ├── components/       # Reusable UI components
-│   │   │   ├── layout/       # Sidebar, Layout
-│   │   │   ├── post/         # PostCard, TweetComposer
-│   │   │   ├── profile/      # Profile components
-│   │   │   └── ui/           # Button, Input, Avatar
-│   │   ├── contexts/         # AuthContext
-│   │   ├── hooks/            # Custom hooks
-│   │   ├── lib/              # API client, utilities
-│   │   ├── pages/            # Route pages
-│   │   │   ├── auth/         # Login, Signup
-│   │   │   ├── Home.jsx      # Feed timeline
-│   │   │   ├── Profile.jsx   # User profiles
-│   │   │   ├── Explore.jsx   # Discover page
-│   │   │   └── ...
-│   │   ├── App.jsx           # Main app with routing
-│   │   └── index.css         # Tailwind styles
-│   └── package.json
-└── server/                    # Proxy server
-    ├── index.js              # Express proxy
-    └── package.json
-```
-
-## 🎨 Tech Stack
-
-- **Frontend**: React 19 + Vite
-- **Routing**: React Router v7
-- **Styling**: TailwindCSS 3
-- **State Management**: React Query + Context API
-- **Icons**: Lucide React
-- **HTTP Client**: Axios
-- **Backend**: urBackend (BaaS)
-- **Proxy Server**: Express + http-proxy-middleware
-
-## 🔐 Security Architecture
-
-- **Public Key** (`pk_live_*`) - Used for read operations, safe in frontend
-- **Secret Key** (`sk_live_*`) - Used for write operations, kept in server
-- **Proxy Server** - Forwards write requests with secret key injection
-- **JWT Tokens** - 7-day expiration, auto-refresh on login
-
-## 📖 Documentation
-
-- **[SETUP.md](./SETUP.md)** - Detailed setup guide with collection schemas
-- **[urBackend Docs](https://github.com/yash-pouranik/urBackend/tree/main/docs)** - Official API documentation
-
-## 🌟 Key Features Explained
-
-### Infinite Scroll
-Uses React Query's `useInfiniteQuery` with Intersection Observer for smooth pagination.
-
-### Optimistic Updates
-Like/unlike actions update UI immediately, then sync with backend.
-
-### Image Upload
-Multi-image support with preview, client-side validation, and urBackend storage API.
-
-### Real-time Feel
-Feed auto-refreshes every 30 seconds using React Query's polling.
-
-## 🐛 Troubleshooting
-
-**Build Errors?**
-- Ensure TailwindCSS v3 is installed (not v4)
-- Run `npm install` in both client and server
-
-**API Errors?**
-- Verify API keys in .env files
-- Check if collections exist in urBackend
-- Ensure proxy server is running on port 4000
-
-**Authentication Issues?**
-- Clear localStorage and re-login
-- Check JWT token hasn't expired
-- **IMPORTANT:** Verify `users` collection has `email` and `password` fields (auto-created when you enable Authentication in urBackend)
-- Make sure you enabled Authentication in urBackend dashboard FIRST before creating other collections
-
-**Collection Setup Issues?**
-- See [COLLECTIONS_GUIDE.md](./COLLECTIONS_GUIDE.md) for detailed step-by-step instructions
-- Users collection MUST have `email` and `password` fields (created automatically by urBackend when authentication is enabled)
-- All field names must match exactly as specified in documentation
-
-## 🚀 Deployment
-
-### Frontend (Vercel)
-```bash
-cd client
-npm run build
-# Deploy dist/ folder to Vercel
-```
-
-### Proxy Server (Render/Railway)
-```bash
-cd server
-# Deploy with environment variable API_KEY set
-```
-
-## 📝 TODO (Future Enhancements)
-
-- [ ] Retweet functionality
-- [ ] Real-time notifications with WebSockets
-- [ ] Direct messaging
-- [ ] Hashtag support
-- [ ] Bookmarks
-- [ ] Video uploads
-- [ ] Analytics dashboard
-- [ ] Lists feature
-
-## 🤝 Contributing
-
-This is a demo app showcasing urBackend's capabilities. Feel free to fork and enhance!
-
-## 📄 License
-
-MIT - Built with ❤️ using urBackend
-
-## 🙏 Credits
-
-- **urBackend** - https://urbackend.bitbros.in
-- **Icons** - Lucide React
-- **UI Inspiration** - X.com (Twitter)
 
 ---
 
-**Made by developers, for developers** 🚀
+## 📁 Project Structure
 
-Need help? Join the [Discord](https://discord.gg/CXJjvJkNWn)
+```text
+social-demo/
+├── client/              # React App (Vite)
+│   ├── src/
+│   │   ├── components/  # Atomic UI, Post, and Layout components
+│   │   ├── contexts/    # Auth state management
+│   │   ├── lib/         # API clients (Public & Private Proxy)
+│   │   └── pages/       # Route-level views (Home, Profile, etc.)
+└── server/              # Express Proxy Server
+    └── index.js         # Secret Key injection & Multipart streaming
+```
 
+---
+
+## 🔐 Security Architecture
+
+To protect your **Secret Key**, this app uses a hybrid architecture:
+1. **Public API Client**: Uses `pk_live_*` for safe read operations directly from the browser.
+2. **Private Proxy Server**: A simple Express server that holds your `sk_live_*`. Writing operations (Post, Like, Upload) are routed through this proxy to keep your secret key hidden from the client.
+
+---
+
+## 📊 Detailed Schema Reference
+
+### `likes`
+```json
+{
+  "userId": { "type": "String", "required": true },
+  "targetId": { "type": "String", "required": true },
+  "targetType": { "type": "String", "enum": ["post", "comment"] }
+}
+```
+
+### `follows`
+```json
+{
+  "followerId": { "type": "String", "required": true },
+  "followingId": { "type": "String", "required": true }
+}
+```
+
+---
+
+## 🐛 Troubleshooting
+
+- **Images not uploading?** Ensure the `server` is running and `API_KEY` is a secret key (`sk_live_...`).
+- **403 Forbidden?** Double-check your **Domain Whitelisting** settings in the urBackend dashboard.
+- **Data not appearing?** Verify that your collection names and field types match the schemas above exactly.
+
+---
+
+## 📝 Roadmap
+
+- [ ] Real-time Notifications (WebSockets)
+- [ ] Retweet/Quote Tweet functionality
+- [ ] Direct Messaging (DM)
+- [ ] Hashtag & Trending Topics algorithm
+
+---
+
+Built with ❤️ by the **urBackend** Community.
+[Discord](https://discord.gg/CXJjvJkNWn) | [Documentation](https://github.com/yash-pouranik/urBackend/tree/main/docs)
