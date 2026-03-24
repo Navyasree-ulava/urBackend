@@ -5,7 +5,7 @@ urBackend provides a simplified RESTful interface for MongoDB. There is no need 
 ## Collection Access
 
 All database endpoints follow the pattern:
-`https://api.urbackend.bitbros.in/api/data/:collectionName`
+`https://api.ub.bitbros.in/api/data/:collectionName`
 
 Replace `:collectionName` with the name of your collection (e.g., `posts`, `comments`, `inventory`).
 
@@ -14,7 +14,7 @@ Replace `:collectionName` with the name of your collection (e.g., `posts`, `comm
 **Endpoint**: `POST /api/data/:collectionName`
 
 ```javascript
-await fetch('https://api.urbackend.bitbros.in/api/data/posts', {
+await fetch('https://api.ub.bitbros.in/api/data/posts', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-api-key': 'YOUR_KEY' },
   body: JSON.stringify({
@@ -42,7 +42,7 @@ urBackend uses `$set` logic, meaning you only need to send the fields you want t
 
 ```javascript
 const postId = "YOUR_DOCUMENT_ID";
-await fetch(`https://api.urbackend.bitbros.in/api/data/posts/${postId}`, {
+await fetch(`https://api.ub.bitbros.in/api/data/posts/${postId}`, {
   method: 'PUT',
   headers: { 'Content-Type': 'application/json', 'x-api-key': 'YOUR_KEY' },
   body: JSON.stringify({

@@ -24,7 +24,7 @@ To get started, navigate to the **Database** tab in your dashboard and click **"
 
 ### Example: Storing a Product
 ```javascript
-fetch('https://api.urbackend.bitbros.in/api/data/products', {
+fetch('https://api.ub.bitbros.in/api/data/products', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

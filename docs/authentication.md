@@ -21,7 +21,7 @@ Creates a new user and returns a 7-day JWT token.
 **Endpoint**: `POST /api/userAuth/signup`
 
 ```javascript
-await fetch('https://api.urbackend.bitbros.in/api/userAuth/signup', {
+await fetch('https://api.ub.bitbros.in/api/userAuth/signup', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-api-key': 'YOUR_KEY' },
   body: JSON.stringify({
@@ -40,7 +40,7 @@ Authenticates credentials and returns a 7-day JWT token.
 **Endpoint**: `POST /api/userAuth/login`
 
 ```javascript
-const res = await fetch('https://api.urbackend.bitbros.in/api/userAuth/login', {
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-api-key': 'YOUR_KEY' },
   body: JSON.stringify({
@@ -58,7 +58,7 @@ Fetches the details of the currently authenticated user.
 **Endpoint**: `GET /api/userAuth/me`
 
 ```javascript
-await fetch('https://api.urbackend.bitbros.in/api/userAuth/me', {
+await fetch('https://api.ub.bitbros.in/api/userAuth/me', {
   headers: {
     'x-api-key': 'YOUR_KEY',
     'Authorization': `Bearer ${USER_TOKEN}`

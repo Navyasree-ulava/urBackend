@@ -343,16 +343,30 @@ module.exports.updateProfile = async (req, res) => {
             return res.status(401).json({ error: "Access Denied: Invalid or expired token" });
         }
 
-        const username = req.body.username;
-        if (!username || username.length < 3 || username.length > 50) {
-            return res.status(400).json({ error: "Username must be between 3 and 50 characters." });
+        const updateData = { ...req.body };
+        delete updateData.password;
+        delete updateData.email;
+        delete updateData._id;
+
+        if (updateData.username !== undefined) {
+            const username = updateData.username;
+            if (typeof username !== 'string' || username.length < 3 || username.length > 50) {
+                return res.status(400).json({ error: "Username must be between 3 and 50 characters." });
+            }
         }
 
-        const collection = await getAuthCollection(project);
+        const sanitizedUpdateData = sanitize(updateData);
 
-        const result = await collection.updateOne(
+        const usersColConfig = project.collections.find(c => c.name === 'users');
+        if (!usersColConfig) return res.status(404).json({ error: "Auth collection not found" });
+
+        const connection = await getConnection(project._id);
+        const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
+
+        const result = await Model.updateOne(
             { _id: new mongoose.Types.ObjectId(decoded.userId) },
-            { $set: { username } }
+            { $set: sanitizedUpdateData },
+            { runValidators: true }
         );
 
         res.json({ message: "Profile updated successfully" });

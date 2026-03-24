@@ -12,7 +12,7 @@ To upload a file, send a `POST` request with a `multipart/form-data` body.
 const formData = new FormData();
 formData.append('file', fileInput.files[0]);
 
-const res = await fetch('https://api.urbackend.bitbros.in/api/storage/upload', {
+const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
   method: 'POST',
   headers: { 'x-api-key': 'YOUR_KEY' },
   body: formData
@@ -33,7 +33,7 @@ To delete a file, you must provide the `path` returned during the upload.
 **Endpoint**: `DELETE /api/storage/file`
 
 ```javascript
-await fetch('https://api.urbackend.bitbros.in/api/storage/file', {
+await fetch('https://api.ub.bitbros.in/api/storage/file', {
   method: 'DELETE',
   headers: { 'Content-Type': 'application/json', 'x-api-key': 'YOUR_KEY' },
   body: JSON.stringify({
