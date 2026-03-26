@@ -59,6 +59,20 @@ services:
       NODE_ENV: production
       USER_PORT: 1235
 
+  # ── Web Dashboard (Frontend) ──────────────────────────────────────────────────
+  web-dashboard:
+    build:
+      context: .
+      dockerfile: ./apps/web-dashboard/Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:1234
+    container_name: urbackend_frontend
+    restart: unless-stopped
+    ports:
+      - '5173:80'
+    depends_on:
+      - dashboard-api
+
 volumes:
   mongo_data:
   redis_data:
