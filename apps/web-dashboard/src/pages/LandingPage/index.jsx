@@ -20,11 +20,27 @@ import {
     Activity,
     ChevronDown,
     ChevronUp,
-    Play
+    Code,
+    Check,
+    Plus
 } from 'lucide-react';
-import { motion as Motion } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import Footer from '../../components/Layout/Footer';
 import './style.css';
+
+const HERO_ENDPOINTS = [
+    { method: 'GET', path: '/api/users', status: '200 OK' },
+    { method: 'POST', path: '/api/users', status: '201 Created' },
+    { method: 'GET', path: '/api/users/:id', status: '200 OK' },
+    { method: 'PUT', path: '/api/users/:id', status: '200 OK' },
+    { method: 'DELETE', path: '/api/users/:id', status: '200 OK' },
+];
+
+const HERO_CLICK_STEPS = [
+    { name: 'name', type: 'String', required: true },
+    { name: 'email', type: 'String', required: true },
+    { name: 'role', type: 'String', required: false },
+];
 
 function LandingPage() {
     const { isAuthenticated } = useAuth();
@@ -34,9 +50,14 @@ function LandingPage() {
     const lastScrollY = useRef(0);
     const [scrolled, setScrolled] = useState(false);
 
-    const [apiResponse, setApiResponse] = useState(null);
-    const [isLoadingDemo, setIsLoadingDemo] = useState(false);
     const [openFaqIndex, setOpenFaqIndex] = useState(null);
+    const heroTimersRef = useRef([]);
+    const [collectionName, setCollectionName] = useState('');
+    const [heroFields, setHeroFields] = useState([]);
+    const [isBuildingUi, setIsBuildingUi] = useState(false);
+    const [showDeploying, setShowDeploying] = useState(false);
+    const [showEndpoints, setShowEndpoints] = useState(false);
+    const [activeEndpoints, setActiveEndpoints] = useState([]);
 
     const bigNumberStyle = {
         position: 'absolute',
@@ -56,13 +77,16 @@ function LandingPage() {
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
+            const delta = currentScrollY - lastScrollY.current;
             setScrolled(currentScrollY > 20);
 
-            if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-                setIsNavVisible(false);
-            } else {
+            // Show quickly on even slight upward scroll; hide only on clear downward movement.
+            if (currentScrollY < 80 || delta < -2) {
                 setIsNavVisible(true);
+            } else if (delta > 10 && currentScrollY > 140) {
+                setIsNavVisible(false);
             }
+
             lastScrollY.current = currentScrollY;
         };
 
@@ -70,21 +94,42 @@ function LandingPage() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const runDemo = () => {
-        setIsLoadingDemo(true);
-        setApiResponse(null);
-        setTimeout(() => {
-            setApiResponse({
-                status: 200,
-                data: [
-                    { id: "usr_1", name: "Alice", role: "admin" },
-                    { id: "usr_2", name: "Bob", role: "developer" }
-                ],
-                time: "14ms"
-            });
-            setIsLoadingDemo(false);
-        }, 800);
+    const clearHeroTimers = () => {
+        heroTimersRef.current.forEach(clearTimeout);
+        heroTimersRef.current = [];
     };
+
+    const runHeroDemo = () => {
+        clearHeroTimers();
+        setCollectionName('');
+        setHeroFields([]);
+        setIsBuildingUi(true);
+        setShowDeploying(false);
+        setShowEndpoints(false);
+        setActiveEndpoints([]);
+
+        heroTimersRef.current.push(setTimeout(() => setCollectionName('users'), 400));
+        heroTimersRef.current.push(setTimeout(() => setHeroFields([HERO_CLICK_STEPS[0]]), 900));
+        heroTimersRef.current.push(setTimeout(() => setHeroFields([HERO_CLICK_STEPS[0], HERO_CLICK_STEPS[1]]), 1400));
+        heroTimersRef.current.push(setTimeout(() => setHeroFields(HERO_CLICK_STEPS), 1900));
+        heroTimersRef.current.push(setTimeout(() => setIsBuildingUi(false), 2200));
+        heroTimersRef.current.push(setTimeout(() => setShowDeploying(true), 2500));
+        heroTimersRef.current.push(setTimeout(() => {
+            setShowDeploying(false);
+            setShowEndpoints(true);
+            HERO_ENDPOINTS.forEach((_, index) => {
+                const timer = setTimeout(() => {
+                    setActiveEndpoints(prev => [...prev, index]);
+                }, index * 160);
+                heroTimersRef.current.push(timer);
+            });
+        }, 3600));
+    };
+
+    useEffect(() => {
+        runHeroDemo();
+        return () => clearHeroTimers();
+    }, []);
 
     const toggleFaq = (index) => {
         setOpenFaqIndex(openFaqIndex === index ? null : index);
@@ -92,7 +137,19 @@ function LandingPage() {
 
     return (
         <div className="landing-page">
-            <div className="grid-bg"></div>
+            <div className="grid-bg">
+                <div className="hero-lines"></div>
+                <div className="hero-particles">
+                    <div className="particle"></div>
+                    <div className="particle"></div>
+                    <div className="particle"></div>
+                    <div className="particle"></div>
+                    <div className="particle"></div>
+                    <div className="particle"></div>
+                    <div className="particle"></div>
+                    <div className="particle"></div>
+                </div>
+            </div>
 
             <div className={`mobile-menu-overlay ${isMobileMenuOpen ? 'open' : ''}`}>
                 <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>How it Works</a>
@@ -114,29 +171,41 @@ function LandingPage() {
 
             <nav className={`nav-glass ${!isNavVisible ? 'nav-hidden' : ''} ${scrolled ? 'nav-scrolled' : ''}`}>
                 <div className="nav-container">
-                    <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                        <img src="https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend@main/frontend/public/logo.png" alt="urBackend Logo" style={{ height: '40px', width: 'auto' }} />
+                    <div className="nav-logo">
+                        <img src="https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend/apps/web-dashboard/public/LOGO_SQ.png" alt="urBackend" style={{ height: '40px', width: 'auto' }} />
                     </div>
 
-                    <div className="nav-links" style={{ display: window.innerWidth > 768 ? 'flex' : 'none', gap: '32px', alignItems: 'center', fontSize: '0.95rem', color: '#888', fontWeight: 500 }}>
-                        <a href="#how-it-works" style={{ textDecoration: 'none', color: 'inherit', transition: 'color 0.2s' }}>How it Works</a>
-                        <a href="#features" style={{ textDecoration: 'none', color: 'inherit', transition: 'color 0.2s' }}>Features</a>
-                        <a href="#use-cases" style={{ textDecoration: 'none', color: 'inherit', transition: 'color 0.2s' }}>Use Cases</a>
-                        <a href="#faq" style={{ textDecoration: 'none', color: 'inherit', transition: 'color 0.2s' }}>FAQ</a>
+                    <div className="nav-links">
+                        <a href="#features" className="nav-link">
+                            <Zap size={16} />
+                            <span>Features</span>
+                        </a>
+                        <a href="#use-cases" className="nav-link">
+                            <Box size={16} />
+                            <span>Use Cases</span>
+                        </a>
+                        <a href="https://docs.urbackend.bitbros.in" target="_blank" rel="noopener noreferrer" className="nav-link">
+                            <Terminal size={16} />
+                            <span>Docs</span>
+                        </a>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+                    <div className="nav-actions">
                         {isAuthenticated ? (
-                            <button onClick={() => navigate('/dashboard')} className="btn btn-primary" style={{ fontWeight: 600 }}>
-                                Console
+                            <button onClick={() => navigate('/dashboard')} className="nav-btn-primary">
+                                <Activity size={16} />
+                                <span>Console</span>
                             </button>
                         ) : (
                             <>
-                                <Link to="/login" style={{ color: '#fff', textDecoration: 'none', fontWeight: 500, marginRight: '10px', display: window.innerWidth > 768 ? 'block' : 'none' }}>Log in</Link>
-                                <Link to="/signup" className="btn btn-primary" style={{ fontWeight: 600, padding: '8px 20px' }}>Start Free</Link>
+                                <Link to="/login" className="nav-btn-ghost">Log in</Link>
+                                <Link to="/signup" className="nav-btn-primary">
+                                    <span>Get Started</span>
+                                    <ArrowRight size={16} />
+                                </Link>
                             </>
                         )}
-                        <button className="mobile-menu-btn" style={{ background: 'none', border: 'none', color: '#fff', display: window.innerWidth <= 768 ? 'block' : 'none' }} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                        <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                             {isMobileMenuOpen ? <X /> : <Menu />}
                         </button>
                     </div>
@@ -146,8 +215,9 @@ function LandingPage() {
             <div className="hero-section">
                 <div className="hero-glow"></div>
 
-                <div className="hero-pill">
-                    <Zap size={14} fill="currentColor" strokeWidth={1} /> Public Alpha v0.1.0
+                <div className="status-pill">
+                    <div className="status-dot"></div>
+                    <span>Zero Config. Zero Boilerplate.</span>
                 </div>
 
                 <Motion.h1 
@@ -156,8 +226,7 @@ function LandingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease: "easeOut" }}
                 >
-                    Bring your own MongoDB.<br />
-                    <span className="text-gradient-primary">Get a production-ready backend in 60 seconds.</span>
+                    From Clicks to <span className="shine-text">Secure APIs</span> in seconds.
                 </Motion.h1>
 
                 <Motion.p 
@@ -166,7 +235,7 @@ function LandingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
                 >
-                    your backend — your database — your rules.
+                    Create collections with a few UI clicks, and ship production-ready REST APIs instantly.
                 </Motion.p>
 
                 <Motion.div 
@@ -179,56 +248,115 @@ function LandingPage() {
                         Start Building <ArrowRight size={18} strokeWidth={2} />
                     </Link>
                     <Link to="/docs" className="btn-hero-secondary">
-                        Documentation
+                        Documentation <ArrowRight size={18} strokeWidth={2} />
                     </Link>
                 </Motion.div>
 
                 <Motion.div 
-                    id="demo" 
-                    className="demo-wrapper"
-                    initial={{ opacity: 0, scale: 0.98, y: 30 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    className="hero-interactive-window"
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 1, delay: 0.8 }}
                 >
-                    <div className="demo-header">
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                            <div className="dot red" style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f56' }}></div>
-                            <div className="dot yellow" style={{ width: 10, height: 10, borderRadius: '50%', background: '#ffbd2e' }}></div>
-                            <div className="dot green" style={{ width: 10, height: 10, borderRadius: '50%', background: '#27c93f' }}></div>
+                    <div className="lh-header">
+                        <div className="lh-dots">
+                            <span className="lh-dot lh-dot-red"></span>
+                            <span className="lh-dot lh-dot-yellow"></span>
+                            <span className="lh-dot lh-dot-green"></span>
                         </div>
-                        <div className="url-bar">
-                            <span style={{ color: '#fff' }}>https://api.urbackend.bitbros.in/v1/users</span>
-                            <span style={{ fontSize: '0.75rem', color: '#666', border: '1px solid #333', padding: '2px 6px', borderRadius: 4 }}>GET</span>
+                        <div className="lh-title">
+                            <Terminal size={14} />
+                            <span>urBackend Studio</span>
                         </div>
+                        <button className="lh-replay" onClick={runHeroDemo}>↻ Replay</button>
                     </div>
 
-                    <div className="demo-content">
-                        <div className="demo-sidebar">
-                            <div className="demo-nav-item active"><Database size={16} /> Users</div>
-                            <div className="demo-nav-item"><Box size={16} /> Products</div>
-                            <div className="demo-nav-item"><HardDrive size={16} /> Storage</div>
-                            <div className="demo-nav-item"><Shield size={16} /> Auth</div>
-                        </div>
-                        <div className="demo-main">
-                            <button className="run-btn" onClick={runDemo}>
-                                <Play size={14} fill="currentColor" /> {isLoadingDemo ? 'Running...' : 'Send Request'}
-                            </button>
-
-                            {isLoadingDemo ? (
-                                <div style={{ color: '#666', marginTop: '2rem' }}>Processing request...</div>
-                            ) : apiResponse ? (
-                                <>
-                                    <div style={{ color: '#666', marginBottom: '10px' }}>// Status: <span style={{ color: '#27C93F' }}>200 OK</span> • Time: {apiResponse.time}</div>
-                                    <pre style={{ color: '#e5e5e5', lineHeight: 1.5, fontSize: '0.9rem', overflowX: 'auto' }}>
-                                        {JSON.stringify(apiResponse.data, null, 2)}
-                                    </pre>
-                                </>
-                            ) : (
-                                <div style={{ color: '#444', marginTop: '4rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                                    <Terminal size={48} color="#333" />
-                                    <span>Hit "Send Request" to fetch live data.</span>
+                    <div className="lh-content">
+                        <div className="lh-pane">
+                            <div className="lh-pane-header">
+                                <Database size={14} />
+                                <span>Collection Builder</span>
+                                <span className="lh-pane-label">UI Mode</span>
+                            </div>
+                            <div className="lh-builder">
+                                <div className="lh-group">
+                                    <label>Name</label>
+                                    <div className="lh-input">{collectionName || 'users'}</div>
                                 </div>
-                            )}
+                                <div className="lh-head-row">
+                                    <span>NAME</span>
+                                    <span>TYPE</span>
+                                    <span>REQ</span>
+                                </div>
+                                <div className="lh-table">
+                                    {heroFields.map((field, index) => (
+                                        <Motion.div
+                                            key={field.name}
+                                            className="lh-row"
+                                            initial={{ opacity: 0, x: -12 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ duration: 0.25, delay: index * 0.08 }}
+                                        >
+                                            <span className="lh-name">{field.name}</span>
+                                            <span className="lh-type">{field.type}</span>
+                                            <span className={`lh-req ${field.required ? 'on' : 'off'}`}>
+                                                {field.required ? <Check size={12} /> : '—'}
+                                            </span>
+                                        </Motion.div>
+                                    ))}
+                                </div>
+                                <div className="lh-actions">
+                                    <button type="button" className="lh-add-btn"><Plus size={12} />Add Column</button>
+                                    {isBuildingUi && <span className="lh-live">Auto-clicking...</span>}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="lh-middle">
+                            <div className="lh-line">
+                                <Motion.div
+                                    className="lh-pulse"
+                                    animate={{ x: showDeploying ? [0, 92] : 0, opacity: showDeploying ? [1, 0] : 0.35 }}
+                                    transition={{ duration: 1.2, repeat: showDeploying ? 0 : Infinity, repeatDelay: 1 }}
+                                />
+                            </div>
+                            <AnimatePresence>
+                                {showDeploying && (
+                                    <Motion.div className="lh-deploying" initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }}>
+                                        <Zap size={12} />
+                                        <span>Deploying...</span>
+                                    </Motion.div>
+                                )}
+                            </AnimatePresence>
+                            <div className="lh-engine"><Cpu size={20} /></div>
+                        </div>
+
+                        <div className="lh-pane lh-pane-right">
+                            <div className="lh-pane-header">
+                                <Code size={14} />
+                                <span>Generated APIs</span>
+                                <span className="lh-pane-label">endpoints</span>
+                            </div>
+                            <div className="lh-endpoints">
+                                {showEndpoints ? HERO_ENDPOINTS.map((endpoint, index) => (
+                                    <Motion.div
+                                        key={`${endpoint.method}-${endpoint.path}`}
+                                        className={`lh-endpoint ${activeEndpoints.includes(index) ? 'active' : ''}`}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.12 }}
+                                    >
+                                        <span className={`lh-method ${endpoint.method.toLowerCase()}`}>{endpoint.method}</span>
+                                        <code>{endpoint.path}</code>
+                                        <span className="lh-status"><Check size={12} />{endpoint.status}</span>
+                                    </Motion.div>
+                                )) : (
+                                    <div className="lh-empty">
+                                        <Terminal size={28} />
+                                        <p>Waiting for UI actions...</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </Motion.div>
@@ -460,13 +588,30 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div className="cta-section" style={{ padding: '8rem 0', background: 'radial-gradient(circle at 50% 50%, rgba(0, 245, 212, 0.05) 0%, transparent 70%)', textAlign: 'center' }}>
-                <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem' }}>
-                    <h2 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1.5rem', letterSpacing: '-0.04em' }}>Ready to ship?</h2>
-                    <p style={{ fontSize: '1.25rem', color: '#a1a1aa', marginBottom: '3rem' }}>Join hundreds of developers building the future without the backend headaches.</p>
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <Link to="/signup" className="btn-hero-primary" style={{ padding: '1rem 3rem' }}>Create Your Project</Link>
-                        <Link to="/login" className="btn-hero-secondary" style={{ padding: '1rem 3rem' }}>Back to Console</Link>
+            <div className="cta-section">
+                <div className="cta-container">
+                    <div className="cta-badge">
+                        <Zap size={16} strokeWidth={2.5} />
+                        <span>Start Building Today</span>
+                    </div>
+                    
+                    <h2 className="cta-heading">
+                        Ship faster. Scale smarter.
+                    </h2>
+                    
+                    <p className="cta-description">
+                        Your MongoDB. Instant REST APIs. Built-in Auth. Zero backend hassle.
+                    </p>
+                    
+                    <div className="cta-buttons">
+                        <Link to="/signup" className="cta-btn-primary">
+                            <span>Get Started Free</span>
+                            <ArrowRight size={18} strokeWidth={2.5} />
+                        </Link>
+                        <Link to="/login" className="cta-btn-secondary">
+                            <Terminal size={18} strokeWidth={2} />
+                            <span>Go to Console</span>
+                        </Link>
                     </div>
                 </div>
             </div>
