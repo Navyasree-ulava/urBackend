@@ -30,7 +30,7 @@ function OtpVerification() {
                 error: 'Failed to send OTP'
             });
         }
-    }, [email, navigate, user]);
+    }, [email, navigate, user, authLoading]);
 
     const handleVerify = async (e) => {
         e.preventDefault();
