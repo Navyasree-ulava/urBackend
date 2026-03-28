@@ -52,7 +52,7 @@ jest.mock('@urbackend/common', () => {
         sendOtp: jest.fn().mockResolvedValue(undefined),
         // Use real zod shapes so validation logic is exercised.
         loginSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
             password: z.string().min(1),
         }),
         changePasswordSchema: z.object({
@@ -63,14 +63,14 @@ jest.mock('@urbackend/common', () => {
             password: z.string().min(1),
         }),
         onlyEmailSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
         }),
         verifyOtpSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
             otp: z.string(),
         }),
         resetPasswordSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
             otp: z.string(),
             newPassword: z.string().min(6),
         }),

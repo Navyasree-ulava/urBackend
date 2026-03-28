@@ -33,27 +33,27 @@ jest.mock('@urbackend/common', () => {
             add: jest.fn().mockResolvedValue(undefined),
         },
         loginSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
             password: z.string().min(1),
         }),
         signupSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
             password: z.string().min(6),
         }),
         userSignupSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
             password: z.string().min(6),
         }).passthrough(),
         resetPasswordSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
             otp: z.string(),
             newPassword: z.string().min(6),
         }),
         onlyEmailSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
         }),
         verifyOtpSchema: z.object({
-            email: z.email(),
+            email: z.string().email(),
             otp: z.string(),
         }),
         changePasswordSchema: z.object({

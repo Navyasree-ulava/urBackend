@@ -132,8 +132,8 @@ describe('authMiddleware', () => {
 
             authMiddleware(req, res, next);
 
-            // The extra space splits into ['Bearer', '', ''] — no two-part match,
-            // so treated as missing token.
+            // After trimming and splitting on whitespace, only the scheme 'Bearer'
+            // remains and there is no token part, so it's treated as missing token.
             expect(res.status).toHaveBeenCalledWith(401);
             expect(next).not.toHaveBeenCalled();
         });
