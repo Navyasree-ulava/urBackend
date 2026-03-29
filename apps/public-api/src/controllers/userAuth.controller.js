@@ -523,6 +523,10 @@ module.exports.refreshToken = async (req, res) => {
             return res.status(401).json({ error: 'Refresh session not found' });
         }
 
+        if (String(req.project._id) !== String(session.projectId)) {
+            return res.status(403).json({ error: 'Refresh token does not belong to this project' });
+        }
+
         const rateResult = await assertRefreshRateLimits({ req, tokenId: session.tokenId, userId: session.userId });
         if (rateResult.limited) {
             clearRefreshCookie(res);
@@ -606,6 +610,9 @@ module.exports.logout = async (req, res) => {
             if (parsedToken) {
                 const session = await getRefreshSession(parsedToken.tokenId);
                 if (session && hashRefreshToken(rawRefreshToken) === session.tokenHash) {
+                    if (String(req.project._id) !== String(session.projectId)) {
+                        return res.status(403).json({ error: 'Refresh token does not belong to this project' });
+                    }
                     session.revokedAt = new Date().toISOString();
                     session.isUsed = true;
                     session.lastUsedAt = new Date().toISOString();

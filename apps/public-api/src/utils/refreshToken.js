@@ -41,21 +41,33 @@ const generateRefreshToken = () => {
     };
 };
 
-const readCookie = (req, cookieName) => {
-    const rawCookieHeader = req.headers?.cookie;
-    if (!rawCookieHeader) return null;
-    const cookieParts = rawCookieHeader.split(';').map((part) => part.trim());
-    const cookie = cookieParts.find((part) => part.startsWith(`${cookieName}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(cookieName.length + 1));
-};
+const MAX_IP_LENGTH = 100;
 
-const readRequestIp = (req) => req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+const readRequestIp = (req) => {
+    if (req?.ip) {
+        return req.ip;
+    }
+
+    const headers = req?.headers || {};
+    const xffRaw = headers['x-forwarded-for'] || headers['X-Forwarded-For'];
+    if (typeof xffRaw === 'string' && xffRaw.length > 0) {
+        const firstIp = xffRaw.split(',')[0].trim();
+        if (firstIp) {
+            return firstIp.slice(0, MAX_IP_LENGTH);
+        }
+    }
+
+    if (req?.socket?.remoteAddress) {
+        return req.socket.remoteAddress;
+    }
+
+    return 'unknown';
+};
 
 const shouldExposeRefreshToken = (req) => req.header('x-refresh-token-mode') === 'header';
 
 const readRefreshTokenFromRequest = (req) => {
-    const fromCookie = readCookie(req, 'refreshToken');
+    const fromCookie = req.cookies?.refreshToken || null;
     const fromHeader = req.header('x-refresh-token');
     return fromCookie || fromHeader || null;
 };

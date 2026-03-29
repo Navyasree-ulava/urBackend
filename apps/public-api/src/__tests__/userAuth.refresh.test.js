@@ -84,10 +84,11 @@ const makeProject = () => ({
     collections: [{ name: 'users', model: [{ key: 'email' }, { key: 'password' }] }],
 });
 
-const makeReq = ({ body = {}, headers = {}, project = makeProject() } = {}) => ({
+const makeReq = ({ body = {}, headers = {}, cookies = {}, project = makeProject() } = {}) => ({
     body,
     project,
     headers,
+    cookies,
     header: jest.fn((key) => headers[key] || headers[key?.toLowerCase()] || null),
     ip: '127.0.0.1',
     socket: { remoteAddress: '127.0.0.1' },
@@ -212,9 +213,7 @@ describe('public userAuth refresh flow', () => {
         redis.get.mockResolvedValueOnce(JSON.stringify(session));
 
         const req = makeReq({
-            headers: {
-                cookie: `refreshToken=${rawToken}`,
-            },
+            cookies: { refreshToken: rawToken },
         });
         const res = makeRes();
 
