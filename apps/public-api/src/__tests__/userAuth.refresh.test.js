@@ -43,6 +43,9 @@ jest.mock('@urbackend/common', () => {
             del: jest.fn().mockResolvedValue(1),
             incr: jest.fn().mockResolvedValue(1),
             expire: jest.fn().mockResolvedValue(1),
+            sadd: jest.fn().mockResolvedValue(1),
+            srem: jest.fn().mockResolvedValue(1),
+            smembers: jest.fn().mockResolvedValue([]),
         },
         authEmailQueue: { add: jest.fn().mockResolvedValue(undefined) },
         loginSchema: z.object({
@@ -68,11 +71,18 @@ jest.mock('@urbackend/common', () => {
         getConnection: jest.fn().mockResolvedValue({}),
         getCompiledModel: jest.fn(() => mockModel),
         __mockModel: mockModel,
+        // session manager exports
+        getRefreshSession: jest.fn(),
+        persistRefreshSession: jest.fn().mockResolvedValue(undefined),
+        revokeSessionChain: jest.fn().mockResolvedValue(undefined),
+        getUserActiveSessions: jest.fn().mockResolvedValue([]),
+        getRefreshSessionKey: jest.fn((tokenId) => `project:auth:refresh:session:${tokenId}`),
+        getUserSessionsKey: jest.fn((projectId, userId) => `project:${projectId}:user:${userId}:sessions`),
     };
 });
 
 const bcrypt = require('bcryptjs');
-const { Project, redis, __mockModel: mockModel } = require('@urbackend/common');
+const { Project, redis, getRefreshSession, persistRefreshSession, __mockModel: mockModel } = require('@urbackend/common');
 const controller = require('../controllers/userAuth.controller');
 
 const makeProject = () => ({
@@ -172,7 +182,7 @@ describe('public userAuth refresh flow', () => {
             expiresAt: new Date(Date.now() + 60_000).toISOString(),
         };
 
-        redis.get.mockResolvedValueOnce(JSON.stringify(session)); // getRefreshSession
+        getRefreshSession.mockResolvedValueOnce(session); // getRefreshSession from common
         Project.__chain.lean.mockResolvedValueOnce(makeProject()); // load project
         mockModel.findOne.mockReturnValueOnce({
             lean: jest.fn().mockResolvedValue({ _id: 'user_1' }),
@@ -210,7 +220,7 @@ describe('public userAuth refresh flow', () => {
             expiresAt: new Date(Date.now() + 60_000).toISOString(),
         };
 
-        redis.get.mockResolvedValueOnce(JSON.stringify(session));
+        getRefreshSession.mockResolvedValueOnce(session);
 
         const req = makeReq({
             cookies: { refreshToken: rawToken },

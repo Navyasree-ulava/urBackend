@@ -31,7 +31,7 @@ const {
     updateCollectionRls
 } = require("../controllers/project.controller")
 
-const { createAdminUser, resetPassword, getUserDetails, updateAdminUser } = require('../controllers/userAuth.controller');
+const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
 
 const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB Limit
 
@@ -113,5 +113,9 @@ router.post('/:projectId/admin/users', authMiddleware, loadProjectForAdmin, chec
 router.patch('/:projectId/admin/users/:userId/password', authMiddleware, loadProjectForAdmin, checkAuthEnabled, resetPassword);
 router.get('/:projectId/admin/users/:userId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, getUserDetails);
 router.put('/:projectId/admin/users/:userId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, updateAdminUser);
+
+// SESSION MANAGEMENT (Admin)
+router.get('/:projectId/admin/users/:userId/sessions', authMiddleware, loadProjectForAdmin, checkAuthEnabled, listUserSessions);
+router.delete('/:projectId/admin/users/:userId/sessions/:tokenId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, revokeUserSession);
 
 module.exports = router;

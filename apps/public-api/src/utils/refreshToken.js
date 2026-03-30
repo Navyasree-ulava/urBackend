@@ -1,10 +1,16 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { redis } = require('@urbackend/common');
+const {
+    getRefreshSessionKey,
+    getUserSessionsKey,
+    getRefreshSession,
+    persistRefreshSession,
+    revokeSessionChain
+} = require('@urbackend/common');
 
 const ACCESS_TOKEN_EXPIRES_IN = process.env.PUBLIC_AUTH_ACCESS_TOKEN_TTL || '15m';
 const REFRESH_TOKEN_TTL_SECONDS = Number(process.env.PUBLIC_AUTH_REFRESH_TOKEN_TTL_SECONDS || 7 * 24 * 60 * 60);
-const REFRESH_SESSION_PREFIX = 'project';
 
 const getRefreshCookieOptions = () => ({
     httpOnly: true,
@@ -18,8 +24,6 @@ const clearCookieOptions = () => ({
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
 });
-
-const getRefreshSessionKey = (tokenId) => `${REFRESH_SESSION_PREFIX}:auth:refresh:session:${tokenId}`;
 
 const hashRefreshToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
@@ -79,7 +83,7 @@ const parseRefreshToken = (rawToken) => {
     return { tokenId, tokenSecret };
 };
 
-const saveRefreshSession = async ({ tokenId, rawToken, projectId, userId, rotatedFrom = null, isUsed = false, rotatedTo = null }) => {
+const saveRefreshSession = async ({ tokenId, rawToken, projectId, userId, rotatedFrom = null, isUsed = false, rotatedTo = null, ip = null, userAgent = null }) => {
     const nowIso = new Date().toISOString();
     const session = {
         tokenId,
@@ -90,27 +94,15 @@ const saveRefreshSession = async ({ tokenId, rawToken, projectId, userId, rotate
         rotatedTo,
         isUsed,
         revokedAt: null,
+        ip,
+        userAgent,
         createdAt: nowIso,
         lastUsedAt: nowIso,
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000).toISOString()
     };
     await redis.set(getRefreshSessionKey(tokenId), JSON.stringify(session), 'EX', REFRESH_TOKEN_TTL_SECONDS);
+    await redis.sadd(getUserSessionsKey(projectId, userId), tokenId);
     return session;
-};
-
-const getRefreshSession = async (tokenId) => {
-    const raw = await redis.get(getRefreshSessionKey(tokenId));
-    if (!raw) return null;
-    try {
-        return JSON.parse(raw);
-    } catch {
-        return null;
-    }
-};
-
-const persistRefreshSession = async (session) => {
-    const ttl = Math.max(1, Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000));
-    await redis.set(getRefreshSessionKey(session.tokenId), JSON.stringify(session), 'EX', ttl);
 };
 
 const incrementRateCounter = async (key, windowSeconds) => {
@@ -139,34 +131,31 @@ const assertRefreshRateLimits = async ({ req, tokenId, userId }) => {
     return { limited: false };
 };
 
-const revokeSessionChain = async (startTokenId) => {
-    let currentTokenId = startTokenId;
-    const visited = new Set();
 
-    while (currentTokenId && !visited.has(currentTokenId)) {
-        visited.add(currentTokenId);
-        const session = await getRefreshSession(currentTokenId);
-        if (!session) break;
-        session.revokedAt = new Date().toISOString();
-        session.lastUsedAt = new Date().toISOString();
-        await persistRefreshSession(session);
-        currentTokenId = session.rotatedTo || null;
-    }
-};
 
 const clearRefreshCookie = (res) => {
     res.clearCookie('refreshToken', clearCookieOptions());
 };
 
-const issueAuthTokens = async ({ project, userId, res, rotatedFrom = null }) => {
+const issueAuthTokens = async ({ project, userId, req, res, rotatedFrom = null }) => {
     const accessToken = signAccessToken(project, userId);
     const { tokenId, rawToken } = generateRefreshToken();
+    
+    let ip = null;
+    let userAgent = null;
+    if (req) {
+        ip = readRequestIp(req);
+        userAgent = req.headers?.['user-agent'] || 'unknown';
+    }
+
     await saveRefreshSession({
         tokenId,
         rawToken,
         projectId: project._id,
         userId,
-        rotatedFrom
+        rotatedFrom,
+        ip,
+        userAgent
     });
 
     res.cookie('refreshToken', rawToken, getRefreshCookieOptions());
@@ -181,12 +170,9 @@ const issueAuthTokens = async ({ project, userId, res, rotatedFrom = null }) => 
 module.exports = {
     assertRefreshRateLimits,
     clearRefreshCookie,
-    getRefreshSession,
     hashRefreshToken,
     issueAuthTokens,
     parseRefreshToken,
     readRefreshTokenFromRequest,
-    revokeSessionChain,
-    shouldExposeRefreshToken,
-    persistRefreshSession
+    shouldExposeRefreshToken
 };

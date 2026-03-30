@@ -5,20 +5,18 @@ const mongoose = require('mongoose');
 const {redis} = require('@urbackend/common');
 const {Project} = require('@urbackend/common');
 const { authEmailQueue } = require('@urbackend/common');
+const { getRefreshSession, persistRefreshSession, revokeSessionChain } = require('@urbackend/common');
 const { loginSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema, sanitize } = require('@urbackend/common');
 const { getConnection } = require('@urbackend/common');
 const { getCompiledModel } = require('@urbackend/common');
 const {
     assertRefreshRateLimits,
     clearRefreshCookie,
-    getRefreshSession,
     hashRefreshToken,
     issueAuthTokens,
     parseRefreshToken,
     readRefreshTokenFromRequest,
-    revokeSessionChain,
-    shouldExposeRefreshToken,
-    persistRefreshSession
+    shouldExposeRefreshToken
 } = require('../utils/refreshToken');
 
 const getUsersModel = async (project) => {
@@ -122,6 +120,7 @@ module.exports.signup = async (req, res) => {
         const issuedTokens = await issueAuthTokens({
             project,
             userId: result._id,
+            req,
             res
         });
 
@@ -164,6 +163,7 @@ module.exports.login = async (req, res) => {
         const issuedTokens = await issueAuthTokens({
             project,
             userId: user._id,
+            req,
             res
         });
 
@@ -581,6 +581,7 @@ module.exports.refreshToken = async (req, res) => {
         const newTokens = await issueAuthTokens({
             project,
             userId: user._id,
+            req,
             res,
             rotatedFrom: session.tokenId
         });

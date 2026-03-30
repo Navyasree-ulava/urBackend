@@ -8,6 +8,7 @@ const { authEmailQueue } = require('@urbackend/common');
 const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema, sanitize } = require('@urbackend/common');
 const { getConnection } = require('@urbackend/common');
 const { getCompiledModel } = require('@urbackend/common');
+const { getUserActiveSessions, getRefreshSession, revokeSessionChain } = require('@urbackend/common');
 
 const hasRequiredField = (usersColConfig, fieldKey) => {
     const model = usersColConfig?.model || [];
@@ -511,6 +512,57 @@ module.exports.updateAdminUser = async (req, res) => {
         }
 
         res.json({ message: "User updated successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// GET ACTIVE SESSIONS FOR A USER (Admin)
+module.exports.listUserSessions = async (req, res) => {
+    try {
+        const project = req.project;
+        const { userId } = req.params;
+
+        // Verify the userId actually exists in this project's users collection
+        const usersColConfig = project.collections.find(c => c.name === 'users');
+        if (usersColConfig) {
+            const connection = await getConnection(project._id);
+            const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
+            const userExists = await Model.findOne(
+                { _id: new mongoose.Types.ObjectId(userId) },
+                { _id: 1 }
+            ).lean();
+            if (!userExists) {
+                return res.status(404).json({ error: 'User not found in this project' });
+            }
+        }
+
+        const sessions = await getUserActiveSessions(project._id, userId);
+        res.json({ sessions });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// REVOKE A SPECIFIC SESSION FOR A USER (Admin)
+module.exports.revokeUserSession = async (req, res) => {
+    try {
+        const projectId = String(req.project._id);
+        const { userId, tokenId } = req.params;
+
+        // Fetch the session to verify it really belongs to this project AND this user
+        const session = await getRefreshSession(tokenId);
+
+        if (!session
+            || String(session.projectId) !== projectId
+            || String(session.userId) !== String(userId)) {
+            return res.status(404).json({ error: 'Session not found or does not belong to this user' });
+        }
+
+        // Revoke the entire chain starting from this token, cleaning up the user sessions set
+        await revokeSessionChain(tokenId);
+
+        res.json({ message: 'Session revoked successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
