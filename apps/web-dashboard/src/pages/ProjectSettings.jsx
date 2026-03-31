@@ -571,18 +571,20 @@ function DatabaseConfigForm({ project, projectId, onProjectUpdate }) {
   );
 }
 
+const INITIAL_STORAGE_CONFIG = {
+  storageProvider: "supabase",
+  storageUrl: "",
+  storageKey: "",
+  s3AccessKeyId: "",
+  s3SecretAccessKey: "",
+  s3Region: "",
+  s3Endpoint: "",
+  s3Bucket: "",
+  publicUrlHost: "",
+};
+
 function StorageConfigForm({ project, projectId, onProjectUpdate }) {
-  const [config, setConfig] = useState({
-    storageProvider: "supabase",
-    storageUrl: "",
-    storageKey: "",
-    s3AccessKeyId: "",
-    s3SecretAccessKey: "",
-    s3Region: "",
-    s3Endpoint: "",
-    s3Bucket: "",
-    publicUrlHost: "",
-  });
+  const [config, setConfig] = useState(INITIAL_STORAGE_CONFIG);
   const [loading, setLoading] = useState(false);
   const isConfigured = project?.resources?.storage?.isExternal || false;
   const [showForm, setShowForm] = useState(!isConfigured);
@@ -638,17 +640,7 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
       );
       toast.success("Storage configuration updated!");
       setShowForm(false);
-      setConfig({
-        storageProvider: "supabase",
-        storageUrl: "",
-        storageKey: "",
-        s3AccessKeyId: "",
-        s3SecretAccessKey: "",
-        s3Region: "",
-        s3Endpoint: "",
-        s3Bucket: "",
-        publicUrlHost: "",
-      });
+      setConfig(INITIAL_STORAGE_CONFIG);
     } catch (err) {
       toast.error(
         err.response?.data?.error || "Failed to update Storage config"
@@ -663,6 +655,7 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
   };
 
   const executeRemove = async () => {
+    setLoading(true);
     try {
       await api.delete(
         `/api/projects/${projectId}/byod-config/storage`,
@@ -679,17 +672,7 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
           storage: { ...prev.resources.storage, isExternal: false }
         }
       }));
-      setConfig({
-        storageProvider: "supabase",
-        storageUrl: "",
-        storageKey: "",
-        s3AccessKeyId: "",
-        s3SecretAccessKey: "",
-        s3Region: "",
-        s3Endpoint: "",
-        s3Bucket: "",
-        publicUrlHost: "",
-      });
+      setConfig(INITIAL_STORAGE_CONFIG);
       setShowForm(true);
 
     } catch (err) {
