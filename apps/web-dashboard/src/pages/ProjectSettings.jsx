@@ -991,7 +991,7 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
 
                 <div className="form-group">
                   <label className="form-label" style={{ marginBottom: "4px", display: "block", fontSize: "0.9rem" }}>
-                    Public URL Host / CDN Domain <span style={{ color: "var(--color-text-muted)", fontSize: "0.8rem" }}>(Optional)</span>
+                    Public URL Host / CDN Domain <span style={{ color: "var(--color-text-muted)", fontSize: "0.8rem" }}>{config.storageProvider === "cloudflare_r2" ? "(Required for R2)" : "(Optional)"}</span>
                   </label>
                   <span style={{ display: "block", marginBottom: "8px", fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
                     If you use a custom domain or CDN (e.g. CloudFront, R2 Dev Domain), enter it here.
