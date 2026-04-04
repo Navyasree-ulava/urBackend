@@ -28,7 +28,7 @@ export default function RecordList({ data, activeCollection, onView }) {
                         >
                             <div className="record-main-info">
                                 <div className="record-header">
-                                    <span className="record-index" aria-hidden="true">#{index + 1}</span>
+                                    <span className="record-index">#{index + 1}</span>
                                     <span className="record-id font-mono">{record._id.substring(0, 8)}...</span>
                                 </div>
 
@@ -48,9 +48,9 @@ export default function RecordList({ data, activeCollection, onView }) {
                                 </div>
                             </div>
 
-                            <div className="record-actions" aria-hidden="true">
+                            <div className="record-actions">
                                 <button className="btn-icon">
-                                    <ArrowRight size={18} aria-hidden="true" />
+                                    <ArrowRight size={18} />
                                 </button>
                             </div>
                         </div>

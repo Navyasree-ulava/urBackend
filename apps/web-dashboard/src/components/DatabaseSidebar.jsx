@@ -33,7 +33,7 @@ export default function DatabaseSidebar({
                         aria-label="Close sidebar"
                         onClick={() => setIsSidebarOpen(false)}
                     >
-                        <X size={18} aria-hidden="true" />
+                        <X size={18} />
                     </button>
                     <button
                         className="btn-icon add-col-btn"
@@ -41,7 +41,7 @@ export default function DatabaseSidebar({
                         onClick={() => navigate(`/project/${projectId}/create-collection`)}
                         title="New Collection"
                     >
-                        <Plus size={18} aria-hidden="true" />
+                        <Plus size={18} />
                     </button>
                 </div>
             </div>

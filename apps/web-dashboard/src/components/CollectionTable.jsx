@@ -184,7 +184,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                             aria-label="View Details"
                             title="View Details"
                         >
-                            <Eye size={15} aria-hidden="true" />
+                            <Eye size={15} />
                         </button>
                         <button
                             className="btn-icon"
@@ -193,7 +193,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                             aria-label="Edit Record"
                             title="Edit"
                         >
-                            <Pencil size={15} aria-hidden="true" />
+                            <Pencil size={15} />
                         </button>
                         <button
                             className="btn-icon danger-hover"
@@ -202,7 +202,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                             aria-label="Delete Record"
                             title="Delete"
                         >
-                            <Trash2 size={15} aria-hidden="true" />
+                            <Trash2 size={15} />
                         </button>
                     </div>
                 ),
@@ -375,7 +375,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                             background: showColumnMenu ? 'rgba(255,255,255,0.08)' : 'transparent'
                         }}
                     >
-                        <Settings2 size={14} aria-hidden="true" />
+                        <Settings2 size={14} />
                         COLUMNS
                     </button>
    {showColumnMenu && (
