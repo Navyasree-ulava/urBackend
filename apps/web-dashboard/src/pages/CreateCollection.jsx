@@ -157,34 +157,40 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                 </select>
 
                 {/* Required checkbox */}
-                <input
-                    type="checkbox"
-                    checked={field.required}
-                    disabled={field.locked}
-                    onChange={(e) => handleChange('required', e.target.checked)}
-                    style={{
-                        accentColor: 'var(--color-primary)',
-                        transform: 'scale(1.1)', cursor: field.locked ? 'not-allowed' : 'pointer', flexShrink: 0,
-                        opacity: field.locked ? 0.6 : 1
-                    }}
-                />
-
-                {/* Unique checkbox */}
-                {depth === 1 && PRIMITIVE_TYPES.includes(field.type) ? (
+                <div style={{ width: '24px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
                     <input
                         type="checkbox"
-                        checked={!!field.unique}
+                        aria-label="required"
+                        checked={field.required}
                         disabled={field.locked}
-                        onChange={(e) => handleChange('unique', e.target.checked)}
+                        onChange={(e) => handleChange('required', e.target.checked)}
                         style={{
                             accentColor: 'var(--color-primary)',
-                            transform: 'scale(1.1)', cursor: field.locked ? 'not-allowed' : 'pointer', flexShrink: 0,
+                            transform: 'scale(1.1)', cursor: field.locked ? 'not-allowed' : 'pointer',
                             opacity: field.locked ? 0.6 : 1
                         }}
                     />
-                ) : (
-                    <div style={{ width: '13px', flexShrink: 0 }} />
-                )}
+                </div>
+
+                {/* Unique checkbox */}
+                <div style={{ width: '24px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+                    {depth === 1 && PRIMITIVE_TYPES.includes(field.type) ? (
+                        <input
+                            type="checkbox"
+                            aria-label="unique"
+                            checked={!!field.unique}
+                            disabled={field.locked}
+                            onChange={(e) => handleChange('unique', e.target.checked)}
+                            style={{
+                                accentColor: 'var(--color-primary)',
+                                transform: 'scale(1.1)', cursor: field.locked ? 'not-allowed' : 'pointer',
+                                opacity: field.locked ? 0.6 : 1
+                            }}
+                        />
+                    ) : (
+                        <div />
+                    )}
+                </div>
 
                 {/* Delete button */}
                 <button
