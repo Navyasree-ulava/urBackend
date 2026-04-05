@@ -362,7 +362,13 @@ module.exports.updateExternalConfigSchema = z
 const socialProviderConfigSchema = z.object({
   enabled: z.boolean().optional(),
   clientId: emptyToUndefined,
-  clientSecret: emptyToUndefined,
+  clientSecret: z
+    .string()
+    .optional()
+    .refine(
+      (val) => val === undefined || val.trim().length > 0,
+      { message: "clientSecret cannot be empty when provided." },
+    ),
 });
 
 module.exports.updateAuthProvidersSchema = z.object({
