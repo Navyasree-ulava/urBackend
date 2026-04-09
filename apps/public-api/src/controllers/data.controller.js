@@ -162,8 +162,9 @@ module.exports.getSingleDoc = async (req, res) => {
     let query = Model.findOne({ $and: [{ _id: id }, baseFilter] });
 
     // Handle population for single doc
-    const populateParam = req.query.populate || req.query.expand;
-    if (populateParam) {
+    const rawPopulateParam = req.query.populate || req.query.expand;
+    if (rawPopulateParam) {
+      const populateParam = Array.isArray(rawPopulateParam) ? rawPopulateParam.join(',') : String(rawPopulateParam);
       const fields = populateParam.split(',').map(f => f.trim()).filter(Boolean);
       fields.forEach(f => {
         query = query.populate(f);
