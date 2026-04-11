@@ -6,7 +6,7 @@ keywords: ["auth", "authentication", "login", "signup", "sdk", "social auth", "o
 
 Access auth methods via `client.auth`. The module automatically stores the `accessToken` from `login()` or `refreshToken()` and uses it for subsequent authenticated requests like `me()` or `updateProfile()`.
 
-## signUp
+## `signUp`
 
 Create a new user account.
 
@@ -27,7 +27,7 @@ const user = await client.auth.signUp({
 
 ---
 
-## login
+## `login`
 
 Authenticate an existing user. The returned `accessToken` is stored internally.
 
@@ -58,7 +58,7 @@ const { accessToken, user } = await client.auth.login({
 
 ---
 
-## refreshToken
+## `refreshToken`
 
 Rotate the current access token. 
 
@@ -71,7 +71,7 @@ refreshToken(refreshToken?: string): Promise<AuthResponse>
 
 ---
 
-## me
+## `me`
 
 Fetch the profile of the currently authenticated user.
 
@@ -81,7 +81,7 @@ me(token?: string): Promise<AuthUser>
 
 ---
 
-## updateProfile
+## `updateProfile`
 
 Update the authenticated user's profile fields.
 
@@ -97,7 +97,7 @@ await client.auth.updateProfile({ name: 'Alice Smith' });
 
 ---
 
-## changePassword
+## `changePassword`
 
 Change the authenticated user's password.
 
