@@ -41,9 +41,9 @@ login(payload: LoginPayload): Promise<AuthResponse>
 interface AuthResponse {
   accessToken?: string;
   token?: string; // Alias for accessToken (deprecated)
-  user?: AuthUser;
   expiresIn?: string;
   userId?: string;
+  user?: AuthUser;
 }
 ```
 
@@ -107,11 +107,11 @@ changePassword(payload: ChangePasswordPayload, token?: string): Promise<{ messag
 
 ---
 
-## Social Auth
+## Social auth
 
 urBackend supports OAuth via GitHub and Google.
 
-### socialStart
+### `socialStart`
 
 Returns the URL to initiate the OAuth flow. Redirect your user's browser to this URL.
 
@@ -119,7 +119,7 @@ Returns the URL to initiate the OAuth flow. Redirect your user's browser to this
 socialStart(provider: 'github' | 'google'): string
 ```
 
-### socialExchange
+### `socialExchange`
 
 Exchange the `rtCode` received at your callback URL for a refresh token.
 
@@ -135,8 +135,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const rtCode = urlParams.get('rtCode');
 const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
 
-if (!rtCode || !token) {
-  throw new Error('Missing OAuth callback parameters');
+if (!token || !rtCode) {
+  throw new Error('Missing required OAuth callback parameters');
 }
 
 const { refreshToken } = await client.auth.socialExchange({ token, rtCode });
@@ -144,7 +144,7 @@ const { refreshToken } = await client.auth.socialExchange({ token, rtCode });
 
 ---
 
-## Account Verification
+## Account verification
 
 Methods for handling email OTP flows.
 
@@ -157,7 +157,7 @@ Methods for handling email OTP flows.
 
 ---
 
-## publicProfile
+## `publicProfile`
 
 Fetch a public-safe profile for any user by their username. This does not return sensitive fields like email or provider IDs.
 
@@ -167,7 +167,7 @@ publicProfile(username: string): Promise<AuthUser>
 
 ---
 
-## logout
+## `logout`
 
 Revokes the current session on the server and clears the local token.
 
@@ -177,7 +177,7 @@ logout(token?: string): Promise<{ success: boolean; message: string }>
 
 ---
 
-## Manual Token Management
+## Manual token management
 
 If you need to manage tokens manually (e.g., after social auth), use these helper methods:
 

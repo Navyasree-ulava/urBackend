@@ -52,8 +52,11 @@ const products = await client.db.getAll('products', {
   sort: 'price:asc'
 });
 
-// Send an email (server-side only, requires secret key)
-await client.mail.send({
+// ⚠️ Server-side only — requires a secret key (sk_live_...).
+// Do not use this initialization in browser/client code.
+const serverClient = urBackend({ apiKey: process.env.URBACKEND_SECRET_KEY });
+
+await serverClient.mail.send({
   to: 'user@example.com',
   subject: 'Order Confirmed',
   text: 'Your chair is on the way!'

@@ -43,6 +43,11 @@ Store the `path` alongside the `url` in your database. You need it to delete the
 
 ```typescript
 const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+
+if (!input?.files?.length) {
+  throw new Error('No file selected');
+}
+
 const file = input.files[0];
 
 const { url, path, provider } = await client.storage.upload(file);

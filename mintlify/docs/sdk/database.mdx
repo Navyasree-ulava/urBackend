@@ -6,7 +6,7 @@ keywords: ["database", "collections", "crud", "sdk", "typescript", "rls", "query
 
 Access database methods via `client.db`. Collections must be created in the [urBackend Dashboard](https://urbackend.bitbros.in) before you can interact with them.
 
-All methods accept a generic type parameter `T` (extending `DocumentData`) so the returned documents are fully typed.
+Methods that return documents accept a generic type parameter `T` (extending `DocumentData`) so returned documents are fully typed. Methods like `delete()` return status objects and do not accept `T`.
 
 ## Row-Level Security (RLS)
 

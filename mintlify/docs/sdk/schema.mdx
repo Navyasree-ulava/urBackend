@@ -26,10 +26,12 @@ getSchema(collection: string): Promise<CollectionSchema>
 | Field | Type | Description |
 |---|---|---|
 | `key` | `string` | The field name. |
-| `type` | `string` | The Mongoose type (e.g. `"String"`, `"Number"`, `"Ref"`). |
+| `type` | `string` | The Mongoose type (e.g. `"String"`, `"Number"`, `"Ref"`, `"Array"`). |
 | `required` | `boolean` | Whether the field is mandatory. |
 | `unique` | `boolean` | Whether the field has a uniqueness constraint. |
 | `ref` | `string` | If type is `"Ref"`, the target collection name. |
+| `items` | `object` | Element type definition when type is `"Array"`. Contains `type` and optional nested `fields`. |
+| `fields` | `SchemaField[]` | Nested field definitions for embedded objects or sub-documents. |
 
 **Example**
 
