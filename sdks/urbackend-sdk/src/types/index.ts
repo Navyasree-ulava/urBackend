@@ -9,6 +9,7 @@ export interface RequestOptions {
   token?: string;
   isMultipart?: boolean;
   credentials?: RequestCredentials;
+  headers?: Record<string, string>;
 }
 
 export interface QueryParams {
@@ -82,9 +83,9 @@ export interface AuthUser {
 }
 
 export interface AuthResponse {
-  accessToken: string;
+  accessToken?: string;
   /** @deprecated use accessToken instead */
-  token: string;
+  token?: string;
   expiresIn?: string;
   userId?: string;
   user?: AuthUser;

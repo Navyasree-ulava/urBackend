@@ -82,11 +82,18 @@ export class DatabaseModule {
    * Delete a document by its ID
    */
   public async delete(collection: string, id: string, token?: string): Promise<{ deleted: boolean }> {
-    const result = await this.client.request<any>('DELETE', `/api/data/${collection}/${id}`, {
-      token
-    });
-    // The API might return { message: "Document deleted", id: "..." }
-    return { deleted: !!result };
+    const result = await this.client.request<{ message?: string; id?: string } | null>(
+      'DELETE',
+      `/api/data/${collection}/${id}`,
+      { token },
+    );
+
+    const deleted =
+      typeof result === 'object' &&
+      result !== null &&
+      (result.id === id || result.message === 'Document deleted');
+
+    return { deleted };
   }
 
   /**

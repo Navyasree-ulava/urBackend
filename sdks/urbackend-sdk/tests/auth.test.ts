@@ -4,9 +4,9 @@ import urBackend from '../src/index';
 const mockApiKey = 'pk_live_test';
 const client = urBackend({ apiKey: mockApiKey });
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetAllMocks();
-  client.auth.logout();
+  await client.auth.logout();
 });
 
 test('signUp returns user object on success', async () => {

@@ -22,7 +22,7 @@ test('getSchema returns collection schema', async () => {
     vi.fn().mockResolvedValue({
       ok: true,
       headers: new Headers({ 'content-type': 'application/json' }),
-      json: () => Promise.resolve({ success: true, data: mockSchema }),
+      json: () => Promise.resolve({ message: 'Schema exists', collection: mockSchema }),
     }),
   );
 

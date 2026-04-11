@@ -8,6 +8,11 @@ export class SchemaModule {
    * Fetch the schema definition for a collection
    */
   public async getSchema(collection: string): Promise<CollectionSchema> {
-    return this.client.request<CollectionSchema>('GET', `/api/schemas/${collection}`);
+    const response = await this.client.request<{
+      message: string;
+      collection: CollectionSchema;
+    }>('GET', `/api/schemas/${collection}`);
+
+    return response.collection;
   }
 }

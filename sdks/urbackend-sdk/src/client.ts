@@ -63,6 +63,14 @@ export class UrBackendClient {
     return this._mail;
   }
 
+  public getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  public getApiKey(): string {
+    return this.apiKey;
+  }
+
   /**
    * Internal request handler
    */
@@ -83,8 +91,8 @@ export class UrBackendClient {
     }
 
     // Merge custom headers from options if provided
-    if ((options as any).headers) {
-      Object.assign(headers, (options as any).headers);
+    if (options.headers) {
+      Object.assign(headers, options.headers);
     }
 
     let requestBody: BodyInit | undefined;

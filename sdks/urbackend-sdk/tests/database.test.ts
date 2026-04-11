@@ -115,7 +115,7 @@ test('delete returns { deleted: true } and handles token', async () => {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
     headers: new Headers({ 'content-type': 'application/json' }),
-    json: () => Promise.resolve({ success: true, data: { message: 'Deleted' } }),
+    json: () => Promise.resolve({ success: true, data: { message: 'Document deleted', id: 'id-1' } }),
   });
   vi.stubGlobal('fetch', fetchMock);
 

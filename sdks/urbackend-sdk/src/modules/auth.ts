@@ -12,7 +12,7 @@ import {
   ResetPasswordPayload,
   SocialExchangePayload,
   SocialExchangeResponse,
-  ApiResponse,
+  RequestOptions,
 } from '../types';
 import { AuthError } from '../errors';
 
@@ -140,7 +140,7 @@ export class AuthModule {
    * @param refreshToken Optional refresh token for header mode. If omitted, uses cookie mode.
    */
   public async refreshToken(refreshToken?: string): Promise<AuthResponse> {
-    const options: any = {};
+    const options: RequestOptions = {};
     if (refreshToken) {
       options.headers = { 'x-refresh-token': refreshToken, 'x-refresh-token-mode': 'header' };
     } else {
@@ -157,17 +157,16 @@ export class AuthModule {
    * Redirect the user's browser to this URL to begin the flow.
    */
   public socialStart(provider: 'github' | 'google'): string {
-    return `${this.client['baseUrl']}/api/userAuth/social/${provider}/start?key=${this.client['apiKey']}`;
+    return `${this.client.getBaseUrl()}/api/userAuth/social/${provider}/start?key=${this.client.getApiKey()}`;
   }
 
   /**
    * Exchange social auth rtCode for a refresh token
    */
-  public async socialExchange(payload: SocialExchangePayload): Promise<ApiResponse<SocialExchangeResponse>> {
-    const response = await this.client.request<ApiResponse<SocialExchangeResponse>>('POST', '/api/userAuth/social/exchange', {
+  public async socialExchange(payload: SocialExchangePayload): Promise<SocialExchangeResponse> {
+    return this.client.request<SocialExchangeResponse>('POST', '/api/userAuth/social/exchange', {
       body: payload,
     });
-    return response;
   }
 
   /**
