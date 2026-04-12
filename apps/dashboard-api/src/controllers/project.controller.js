@@ -246,10 +246,51 @@ module.exports.createProject = async (req, res) => {
 module.exports.getAllProject = async (req, res) => {
   try {
     const projects = await Project.find({ owner: req.user._id })
-      .select("name description")
+      .select("name description databaseUsed databaseLimit storageUsed storageLimit updatedAt isAuthEnabled")
       .lean();
 
-    res.status(200).json(projects);
+    // --- HEALTH CALCULATION (SIMULATED / CALCULATED) ---
+    // Fetch recent log status for all projects to determine health
+    const projectIds = projects.map(p => p._id);
+    const recentLogs = await Log.aggregate([
+      { $match: { projectId: { $in: projectIds } } },
+      { $sort: { timestamp: -1 } },
+      { $limit: 100 }, // Get the last 100 logs globally for user to keep it fast
+      { $group: {
+          _id: "$projectId",
+          errorCount: { $sum: { $cond: [{ $gte: ["$status", 400] }, 1, 0] } },
+          successCount: { $sum: { $cond: [{ $lt: ["$status", 400] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    const logsMap = recentLogs.reduce((acc, log) => {
+      acc[log._id.toString()] = log;
+      return acc;
+    }, {});
+
+    const enrichedProjects = projects.map(project => {
+      const stats = logsMap[project._id.toString()];
+      let health = 'healthy';
+      
+      // Determine health: If > 20% recent errors, mark as warning
+      if (stats) {
+        const total = stats.errorCount + stats.successCount;
+        const errorRate = stats.errorCount / total;
+        if (errorRate > 0.2) health = 'warning';
+      }
+
+      return {
+        ...project,
+        health,
+        metrics: {
+          database: { used: project.databaseUsed, limit: project.databaseLimit },
+          storage: { used: project.storageUsed, limit: project.storageLimit }
+        }
+      };
+    });
+
+    res.status(200).json(enrichedProjects);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

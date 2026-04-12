@@ -1,13 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Database, HardDrive, ArrowRight, Shield, Globe, Clock } from 'lucide-react';
+import UsageProgressBar from './UsageProgressBar';
 
 const ProjectCard = ({ project }) => {
   const cardStyle = {
     background: 'var(--color-bg-card)',
     border: '1px solid var(--color-border)',
-    borderRadius: '12px',
-    padding: '1.5rem',
+    borderRadius: '10px',
+    padding: '1.25rem', // Reduced padding
     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
     display: 'flex',
     flexDirection: 'column',
@@ -29,78 +30,82 @@ const ProjectCard = ({ project }) => {
       className="dashboard-card-link"
       style={{ textDecoration: 'none', display: 'block', height: '100%' }}
     >
-      <div className="dashboard-card group" style={cardStyle}>
+      <div className="dashboard-card group glass-card" style={cardStyle}>
         {/* Top Section: Icon & Status */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div style={{
-            width: '42px', height: '42px',
-            borderRadius: '10px',
+            width: '36px', height: '36px', // Smaller icon wrap
+            borderRadius: '8px',
             background: 'linear-gradient(135deg, rgba(62, 207, 142, 0.1), rgba(0,0,0,0))',
             color: 'var(--color-primary)',
             border: '1px solid rgba(62, 207, 142, 0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
-            <Database size={20} />
+            <Database size={16} /> {/* Smaller icon */}
           </div>
           
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '4px 10px', borderRadius: '20px',
-            background: 'rgba(62, 207, 142, 0.05)',
-            border: '1px solid rgba(62, 207, 142, 0.1)',
-            fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-primary)'
-          }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-primary)' }}></span>
-            Active
+          <div className={`badge badge-${project.health === 'warning' ? 'warning' : 'success'}`} style={{ padding: '2px 8px', fontSize: '0.65rem' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }}></span>
+            {project.health === 'warning' ? 'Degraded' : 'Active'}
           </div>
         </div>
 
         {/* Info Section */}
-        <div style={{ marginBottom: '1.5rem', flex: 1 }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--color-text-main)', marginBottom: '6px', letterSpacing: '-0.01em' }}>
+        <div style={{ marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-main)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
             {project.name}
             </h3>
             <p style={{
             color: 'var(--color-text-muted)',
-            fontSize: '0.85rem',
-            lineHeight: '1.5',
+            fontSize: '0.8rem', // Smaller text
+            lineHeight: '1.4',
             display: '-webkit-box',
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 1,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden'
             }}>
-            {project.description || "No description provided for this project."}
+            {project.description || "No description provided."}
             </p>
         </div>
 
-        {/* Tech Tags */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: 'var(--color-text-muted)' }}>MongoDB</span>
-            <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: 'var(--color-text-muted)' }}>Auth</span>
-            <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: 'var(--color-text-muted)' }}>Storage</span>
+        {/* Usage Metrics */}
+        <div style={{ flex: 1 }}>
+            <UsageProgressBar 
+                label="Database" 
+                used={project.metrics?.database?.used || project.databaseUsed || 0} 
+                limit={project.metrics?.database?.limit || project.databaseLimit || 20 * 1024 * 1024} 
+            />
+            <UsageProgressBar 
+                label="Storage" 
+                used={project.metrics?.storage?.used || project.storageUsed || 0} 
+                limit={project.metrics?.storage?.limit || project.storageLimit || 20 * 1024 * 1024} 
+            />
         </div>
 
         {/* Footer Metrics */}
         <div style={{
           borderTop: '1px solid var(--color-border)',
-          paddingTop: '1rem',
+          paddingTop: '0.75rem',
+          marginTop: '0.5rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           color: 'var(--color-text-muted)',
-          fontSize: '0.75rem'
+          fontSize: '0.7rem' // Smaller footer text
         }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Clock size={12} />
+                <Clock size={11} />
                 <span>{formatDate(project.updatedAt)}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <HardDrive size={12} />
-                <span>{project.storageLimit ? Math.round(project.storageLimit / (1024 * 1024)) : 20}MB</span>
-            </div>
+            {project.isAuthEnabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-primary)' }}>
+                    <Shield size={11} />
+                    <span>Auth</span>
+                </div>
+            )}
           </div>
-          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
         </div>
       </div>
     </Link>

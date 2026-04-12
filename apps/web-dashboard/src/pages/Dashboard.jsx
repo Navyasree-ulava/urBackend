@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Search } from 'lucide-react';
+import { Search, Activity, Zap, Database, HardDrive, LayoutGrid } from 'lucide-react';
 
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
@@ -9,14 +9,16 @@ import { useLayout } from '../context/LayoutContext';
 
 import DashboardShell from '../components/Dashboard/DashboardShell';
 import DashboardHeader from '../components/Dashboard/DashboardHeader';
-import StatsRow from '../components/Dashboard/StatsRow';
 import SectionHeader from '../components/Dashboard/SectionHeader';
 import ProjectGrid from '../components/Dashboard/ProjectGrid';
 import EmptyState from '../components/Dashboard/EmptyState';
 import SkeletonLoader from '../components/Dashboard/SkeletonLoader';
+import RecentActivityItem from '../components/Dashboard/RecentActivityItem';
 
 export default function Dashboard() {
   const [projects, setProjects] = useState([]);
+  const [globalStats, setGlobalStats] = useState(null);
+  const [activity, setActivity] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { user } = useAuth();
@@ -24,19 +26,26 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/api/projects');
-        setProjects(response.data);
+        const [projectsRes, statsRes, activityRes] = await Promise.all([
+          api.get('/api/projects'),
+          api.get('/api/analytics/stats'),
+          api.get('/api/analytics/activity')
+        ]);
+        
+        setProjects(projectsRes.data);
+        setGlobalStats(statsRes.data);
+        setActivity(activityRes.data);
       } catch (err) {
         console.error(err);
-        toast.error("Could not load projects.");
+        toast.error("Could not load dashboard data.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (user) fetchProjects();
+    if (user) fetchData();
   }, [user]);
 
   // Inject search bar into global header
@@ -54,14 +63,8 @@ export default function Dashboard() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div style={{ display: 'flex', gap: '4px' }} className="hide-mobile">
-          <button className="btn btn-secondary" style={{ height: '38px', fontSize: '0.75rem', padding: '0 12px' }}>All</button>
-          <button className="btn btn-secondary" style={{ height: '38px', fontSize: '0.75rem', padding: '0 12px', opacity: 0.6 }}>Active</button>
-        </div>
       </div>
     );
-
-    // Cleanup on unmount
     return () => setHeaderContent(null);
   }, [searchTerm, setHeaderContent]);
 
@@ -72,28 +75,133 @@ export default function Dashboard() {
     (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Calculate global stats directly from projects array for 100% accuracy
+  const totalDatabaseUsed = projects.reduce((acc, p) => acc + (p.databaseUsed || 0), 0);
+  const totalStorageUsed = projects.reduce((acc, p) => acc + (p.storageUsed || 0), 0);
+  const totalRequests = globalStats?.totalRequests || 0;
+
+  const formatSize = (bytes) => {
+    if (!bytes) return '0 MB';
+    if (bytes > 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  };
+
   return (
     <DashboardShell>
-      <DashboardHeader 
-        onCreateProject={handleCreateProject} 
-      />
+      <DashboardHeader onCreateProject={handleCreateProject} />
 
-      {projects.length > 0 && (
-        <StatsRow projectsCount={projects.length} />
+      {/* Global Usage Overview Belt - More Compact */}
+      {!isLoading && (
+        <div className="glass-card" style={{ 
+          padding: '1rem 1.5rem', 
+          borderRadius: '12px', 
+          marginBottom: '1.5rem',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '1.5rem',
+          background: 'linear-gradient(135deg, rgba(62, 207, 142, 0.05) 0%, rgba(123, 97, 255, 0.05) 100%)',
+          border: '1px solid rgba(255,255,255,0.05)'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <LayoutGrid size={12} /> Total Projects
+            </span>
+            <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{projects.length}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Database size={12} /> Database Used
+            </span>
+            <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{formatSize(totalDatabaseUsed)}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <HardDrive size={12} /> Storage Used
+            </span>
+            <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{formatSize(totalStorageUsed)}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Activity size={12} /> API Requests
+            </span>
+            <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)' }}>{totalRequests}</span>
+          </div>
+        </div>
       )}
 
-      <SectionHeader title={searchTerm ? `Search Results (${filteredProjects.length})` : "Your Projects"} />
+      {/* Main Split Layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '2rem' }} className="dashboard-split-layout">
+        <style>{`
+          @media (max-width: 1100px) {
+            .dashboard-split-layout {
+              grid-template-columns: 1fr !important;
+            }
+            .activity-sidebar {
+              display: none;
+            }
+          }
+        `}</style>
 
-      {isLoading ? (
-        <SkeletonLoader />
-      ) : projects.length === 0 ? (
-        <EmptyState onCreateProject={handleCreateProject} />
-      ) : (
-        <ProjectGrid
-          projects={filteredProjects}
-          onCreateProject={handleCreateProject}
-        />
-      )}
+        {/* Left Column: Projects */}
+        <div>
+          <SectionHeader title={searchTerm ? `Search Results (${filteredProjects.length})` : "Your Projects"} />
+          
+          {isLoading ? (
+            <SkeletonLoader />
+          ) : projects.length === 0 ? (
+            <EmptyState onCreateProject={handleCreateProject} />
+          ) : (
+            <ProjectGrid
+              projects={filteredProjects}
+              onCreateProject={handleCreateProject}
+            />
+          )}
+        </div>
+
+        {/* Right Column: Activity Sidebar */}
+        <div className="activity-sidebar">
+          <SectionHeader title="Recent Activity" />
+          <div className="glass-card custom-scrollbar" style={{ 
+            padding: '1.25rem', 
+            borderRadius: '12px', 
+            maxHeight: '600px', 
+            overflowY: 'auto',
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-border)'
+          }}>
+            {activity.length === 0 ? (
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '2rem 0' }}>
+                No recent activity found.
+              </p>
+            ) : (
+              activity.map(item => (
+                <RecentActivityItem key={item.id} activity={item} />
+              ))
+            )}
+            <button className="btn btn-ghost" style={{ width: '100%', marginTop: '1rem', fontSize: '0.75rem', opacity: 0.6 }}>
+              View All Logs
+            </button>
+          </div>
+
+          <div className="glass-card" style={{ 
+            marginTop: '2rem', 
+            padding: '1.25rem', 
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, rgba(123, 97, 255, 0.1) 0%, rgba(0,0,0,0) 100%)',
+            border: '1px solid rgba(123, 97, 255, 0.2)'
+          }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Zap size={14} color="#7B61FF" /> Upgrade to Pro
+            </h4>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', lineHeight: '1.4', marginBottom: '1rem' }}>
+              Get unlimited projects, custom domains, and advanced analytics.
+            </p>
+            <button className="btn btn-primary" style={{ width: '100%', height: '36px', fontSize: '0.8rem', background: '#7B61FF', borderColor: '#7B61FF' }}>
+              Upgrade Now
+            </button>
+          </div>
+        </div>
+      </div>
     </DashboardShell>
   );
 }
