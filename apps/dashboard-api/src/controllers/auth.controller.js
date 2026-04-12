@@ -79,7 +79,9 @@ const buildGithubRedirectUrl = (path, params = {}) => {
 
 const clearGithubStateCookie = (res) => {
     res.cookie(GITHUB_STATE_COOKIE, 'none', {
-        ...getCookieOptions(),
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         expires: new Date(Date.now() + 10 * 1000),
     });
 };
@@ -322,7 +324,9 @@ module.exports.startGithubAuth = async (req, res) => {
     authUrl.searchParams.set('state', state);
 
     res.cookie(GITHUB_STATE_COOKIE, state, {
-        ...getCookieOptions(),
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         expires: new Date(Date.now() + GITHUB_STATE_TTL_MS),
     });
 
