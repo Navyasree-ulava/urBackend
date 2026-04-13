@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
     Database, Key, Copy, RefreshCw, AlertTriangle,
-    Layers, ArrowRight, Activity, Server, ShieldCheck
+    Layers, ArrowRight, Activity, Server, ShieldCheck, Code2
 } from 'lucide-react';
-import { API_URL, PUBLIC_API_URL } from '../config';
+import { PUBLIC_API_URL } from '../config';
+
+import AnalyticsChart from '../components/ProjectDetails/AnalyticsChart';
+import QuickStartTabs from '../components/ProjectDetails/QuickStartTabs';
+import ProjectLogs from '../components/ProjectDetails/ProjectLogs';
+import SectionHeader from '../components/Dashboard/SectionHeader';
 
 function ProjectDetails() {
     const { projectId } = useParams();
@@ -15,15 +20,19 @@ function ProjectDetails() {
     const { user } = useAuth();
 
     const [project, setProject] = useState(null);
+    const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [newKey, setNewKey] = useState(null);
-    const [isRegenerating, setIsRegenerating] = useState(null); // 'publishable', 'secret', or null
 
     useEffect(() => {
-        const fetchProject = async () => {
+        const fetchData = async () => {
             try {
-                const res = await api.get(`/api/projects/${projectId}`);
-                setProject(res.data);
+                const [projectRes, analyticsRes] = await Promise.all([
+                    api.get(`/api/projects/${projectId}`),
+                    api.get(`/api/projects/${projectId}/analytics`)
+                ]);
+                setProject(projectRes.data);
+                setAnalytics(analyticsRes.data);
             } catch (err){
                 toast.error("Failed to load project details");
                 console.error(err)
@@ -31,32 +40,23 @@ function ProjectDetails() {
                 setLoading(false);
             }
         };
-        fetchProject();
+        fetchData();
     }, [projectId, user]);
 
     const handleRegenerateKey = async (keyType) => {
-        if (!window.confirm(`Are you sure you want to roll your ${keyType} key? The old key will stop working immediately.`)) return;
-
-        setIsRegenerating(keyType);
+        if (!window.confirm(`Roll your ${keyType} key? Old key will expire.`)) return;
         try {
             const res = await api.patch(`/api/projects/${projectId}/regenerate-key`, { keyType });
             setNewKey({ key: res.data.apiKey, type: keyType });
-            toast.success(`New ${keyType === 'publishable' ? 'Publishable' : 'Secret'} API Key Generated!`);
+            toast.success("New Key Generated!");
         } catch {
             toast.error("Failed to regenerate key");
-        } finally {
-            setIsRegenerating(null);
         }
-    };
-
-    const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        toast.success("Copied to clipboard!");
     };
 
     if (loading) return (
         <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--color-text-muted)', gap: '10px' }}>
-            <div className="spinner"></div> Loading project...
+            <div className="spinner"></div>
         </div>
     );
 
@@ -64,226 +64,148 @@ function ProjectDetails() {
 
     return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem' }}>
-
-            {/* --- NEW KEY MODAL --- */}
+            
+            {/* New Key Modal */}
             {newKey && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1000,
+                    backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 1000,
                     display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    backdropFilter: 'blur(5px)'
+                    backdropFilter: 'blur(8px)'
                 }}>
-                    <div className="card" style={{ maxWidth: '500px', width: '90%', border: `1px solid ${newKey.type === 'secret' ? '#ef4444' : 'var(--color-primary)'}`, boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
-                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                            <div style={{ width: '50px', height: '50px', background: newKey.type === 'secret' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(62, 207, 142, 0.1)', color: newKey.type === 'secret' ? '#ef4444' : 'var(--color-primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
-                                <Key size={24} />
-                            </div>
-                            <h2 style={{ color: '#fff', marginBottom: '10px', fontSize: '1.5rem' }}>New {newKey.type === 'publishable' ? 'Publishable' : 'Secret'} Key Generated</h2>
-                            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', lineHeight: '1.5' }}>
-                                Please copy this key immediately. For security reasons, it will not be displayed again.
-                            </p>
+                    <div className="glass-card" style={{ maxWidth: '450px', width: '90%', padding: '2rem', borderRadius: '12px', border: `1px solid ${newKey.type === 'secret' ? '#ef4444' : 'var(--color-primary)'}` }}>
+                        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>New {newKey.type} Key</h2>
+                            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Copy this now. It won't be shown again.</p>
                         </div>
-                        <div style={{ position: 'relative', marginBottom: '2rem' }}>
-                            <code style={{
-                                display: 'block',
-                                padding: '1rem',
-                                background: 'var(--color-bg-input)',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: '8px',
-                                color: newKey.type === 'secret' ? '#ef4444' : '#3ECF8E',
-                                fontFamily: 'monospace',
-                                wordBreak: 'break-all',
-                                fontSize: '0.9rem'
-                            }}>
-                                {newKey.key}
-                            </code>
-                            <button
-                                onClick={() => copyToClipboard(newKey.key)}
-                                style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
-                                title="Copy"
-                            >
-                                <Copy size={16} />
-                            </button>
-                        </div>
-                        <button onClick={() => setNewKey(null)} className="btn btn-primary" style={{ width: '100%', padding: '12px' }}>
-                            I have copied it safely
-                        </button>
+                        <code style={{ display: 'block', padding: '12px', background: '#000', borderRadius: '6px', fontSize: '0.85rem', wordBreak: 'break-all', marginBottom: '1.5rem', border: '1px solid var(--color-border)', color: 'var(--color-primary)' }}>{newKey.key}</code>
+                        <button onClick={() => setNewKey(null)} className="btn btn-primary" style={{ width: '100%' }}>I've copied it</button>
                     </div>
                 </div>
             )}
 
-            {/* --- HEADER --- */}
-            <div className="page-header" style={{ marginBottom: '3rem', borderBottom: 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '20px' }}>
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                        <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'linear-gradient(135deg, rgba(62, 207, 142, 0.1), rgba(0,0,0,0))', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(62, 207, 142, 0.1)' }}>
-                            <Server size={28} color="#3ECF8E" />
-                        </div>
-                        <div>
-                            <h1 className="page-title" style={{ fontSize: '2rem', marginBottom: '4px', letterSpacing: '-0.02em' }}>{project.name}</h1>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3ECF8E', background: 'rgba(62, 207, 142, 0.1)', padding: '4px 10px', borderRadius: '20px', fontWeight: 600, border: '1px solid rgba(62, 207, 142, 0.1)' }}>
-                                    <span style={{ width: 6, height: 6, background: 'currentColor', borderRadius: '50%' }}></span> Active
-                                </span>
-                                <span style={{ color: 'var(--color-text-muted)' }}>ID: {project._id}</span>
-                            </div>
-                        </div>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(62, 207, 142, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(62, 207, 142, 0.1)' }}>
+                        <Server size={20} color="#3ECF8E" />
                     </div>
                     <div>
-                        <button onClick={() => navigate(`/project/${projectId}/settings`)} className="btn btn-secondary">
-                            Project Settings
-                        </button>
+                        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em' }}>{project.name}</h1>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Project ID: {project._id}</p>
                     </div>
                 </div>
+                <button onClick={() => navigate(`/project/${projectId}/settings`)} className="btn btn-secondary" style={{ fontSize: '0.8rem', height: '32px' }}>Settings</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
-
-                {/* --- API CONFIGURATION --- */}
-                <div style={{ order: 1 }}>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-text-main)' }}>
-                        <ShieldCheck size={20} color="var(--color-primary)" /> API Config
-                    </h3>
-                    <div className="card">
-                        <div style={{ marginBottom: '2rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '8px', fontWeight: 500 }}>
-                                API Endpoint
-                            </label>
-                            <div className="input-group" style={{ display: 'flex', background: 'var(--color-bg-input)', borderRadius: '6px', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
-                                <div style={{ padding: '10px 14px', color: '#666', borderRight: '1px solid var(--color-border)', fontSize: '0.9rem', userSelect: 'none', background: 'rgba(255,255,255,0.02)' }}>POST</div>
-                                <input
-                                    readOnly
-                                    value={`${PUBLIC_API_URL}/api/data/{collection}`}
-                                    style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--color-text-main)', padding: '10px', fontFamily: 'monospace', fontSize: '0.9rem', outline: 'none' }}
-                                />
-                                <button onClick={() => copyToClipboard(`${PUBLIC_API_URL}/api/data`)} style={{ background: 'transparent', border: 'none', color: '#666', padding: '0 12px', cursor: 'pointer', transition: 'color 0.2s' }}>
-                                    <Copy size={16} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style={{ marginBottom: '20px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--color-primary)', fontWeight: 500 }}>
-                                    Publishable API Key
-                                </label>
-                                <button onClick={() => handleRegenerateKey('publishable')} disabled={!!isRegenerating} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <RefreshCw size={12} className={isRegenerating === 'publishable' ? "spin" : ""} /> Roll Key
-                                </button>
-                            </div>
-                            <div className="input-group" style={{ display: 'flex', background: 'var(--color-bg-input)', borderRadius: '6px', border: '1px solid var(--color-border)', overflow: 'hidden', marginBottom: '8px' }}>
-                                <div style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', color: '#555', borderRight: '1px solid var(--color-border)' }}><Key size={16} /></div>
-                                <input readOnly value="pk_live_••••••••••••••••••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '10px', fontFamily: 'monospace', fontSize: '0.9rem', outline: 'none', letterSpacing: '2px' }} />
-                            </div>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0 }}>Safe for frontend use (React, Next.js). Read-only access.</p>
-                        </div>
-
-                        <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', color: '#ef4444', fontWeight: 500 }}>
-                                    Secret API Key
-                                </label>
-                                <button onClick={() => handleRegenerateKey('secret')} disabled={!!isRegenerating} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <RefreshCw size={12} className={isRegenerating === 'secret' ? "spin" : ""} /> Roll Key
-                                </button>
-                            </div>
-                            <div className="input-group" style={{ display: 'flex', background: 'var(--color-bg-input)', borderRadius: '6px', border: '1px solid var(--color-border)', overflow: 'hidden', marginBottom: '12px' }}>
-                                <div style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', color: '#555', borderRight: '1px solid var(--color-border)' }}><Key size={16} /></div>
-                                <input readOnly value="sk_live_••••••••••••••••••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '10px', fontFamily: 'monospace', fontSize: '0.9rem', outline: 'none', letterSpacing: '2px' }} />
-                            </div>
-                            <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', padding: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                                <AlertTriangle size={16} color="#ef4444" style={{ marginTop: '2px', flexShrink: 0 }} />
-                                <span style={{ fontSize: '0.8rem', color: '#ef4444', lineHeight: '1.4' }}>Grants full write/delete access. Keep secure in your backend (.env).</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* --- COLLECTIONS --- */}
-                <div style={{ order: 2 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-text-main)' }}>
-                            <Database size={20} color="var(--color-primary)" /> Collections
-                        </h3>
-                        <button
-                            onClick={() => navigate(`/project/${projectId}/create-collection`)}
-                            className="btn btn-primary"
-                            style={{ padding: '6px 14px', fontSize: '0.85rem', height: 'auto' }}
-                        >
-                            + New Collection
-                        </button>
-                    </div>
-
-                    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '200px' }}>
-                        {project.collections.filter(c => c.name !== 'users').length === 0 ? (
-                            <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--color-text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--color-bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', border: '1px solid var(--color-border)' }}>
-                                    <Layers size={24} color="#555" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2.5rem' }}>
+                
+                {/* Left Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                    
+                    {/* Analytics Section */}
+                    <section>
+                        <SectionHeader title="Traffic Overview" />
+                        <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Total Requests (7d)</span>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{analytics?.totalRequests || 0}</div>
                                 </div>
-                                <h4 style={{ color: 'var(--color-text-main)', marginBottom: '5px' }}>No Data Yet</h4>
-                                <p style={{ fontSize: '0.9rem', maxWidth: '200px' }}>Create a collection to start storing JSON documents.</p>
+                                <div>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Database Size</span>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{(project.databaseUsed / (1024 * 1024)).toFixed(2)} MB</div>
+                                </div>
                             </div>
-                        ) : (
-                            <div className="table-container">
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-input)' }}>
-                                            <th style={{ padding: '16px', color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Name</th>
-                                            <th style={{ padding: '16px', color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Schema</th>
-                                            <th style={{ padding: '16px', textAlign: 'right' }}></th>
+                            <AnalyticsChart data={analytics?.chartData} />
+                        </div>
+                    </section>
+
+                    {/* Quick Start Section */}
+                    <section>
+                        <SectionHeader title="Quick Start" />
+                        <QuickStartTabs projectId={projectId} publicUrl={PUBLIC_API_URL} />
+                    </section>
+
+                    {/* Collections Section */}
+                    <section>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h2 style={{ fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', opacity: 0.8 }}>Collections</h2>
+                            <button onClick={() => navigate(`/project/${projectId}/create-collection`)} className="btn btn-primary" style={{ height: '28px', fontSize: '0.75rem', padding: '0 10px' }}>+ New</button>
+                        </div>
+                        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+                            {project.collections.length === 0 ? (
+                                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>No collections found.</div>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead style={{ background: 'rgba(255,255,255,0.02)', fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                                        <tr>
+                                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>Name</th>
+                                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600 }}>Fields</th>
+                                            <th style={{ padding: '12px 16px', textAlign: 'right' }}></th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {project.collections.filter(c => c.name !== 'users').map(c => (
-                                            <tr key={c._id} className="collection-row" onClick={() => navigate(`/project/${projectId}/database?collection=${c.name}`)}>
-                                                <td style={{ padding: '16px', fontWeight: 500, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <Database size={16} color="var(--color-text-muted)" className="row-icon" /> {c.name}
-                                                </td>
-                                                <td style={{ padding: '16px', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                                                    {c.model.length} fields defined
-                                                </td>
-                                                <td style={{ padding: '16px', textAlign: 'right', color: 'var(--color-text-muted)' }}>
-                                                    <ArrowRight size={16} className="row-arrow" />
-                                                </td>
+                                        {project.collections.map(c => (
+                                            <tr key={c._id} onClick={() => navigate(`/project/${projectId}/database?collection=${c.name}`)} style={{ cursor: 'pointer', borderTop: '1px solid var(--color-border)' }} className="hover-row">
+                                                <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 500 }}>{c.name}</td>
+                                                <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{c.model.length} fields</td>
+                                                <td style={{ padding: '12px 16px', textAlign: 'right' }}><ArrowRight size={14} color="var(--color-text-muted)" /></td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
+                            )}
+                        </div>
+                    </section>
+                </div>
+
+                {/* Right Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                    
+                    {/* API Config / Keys */}
+                    <section>
+                        <SectionHeader title="API Credentials" />
+                        <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Publishable Key</label>
+                                    <button onClick={() => handleRegenerateKey('publishable')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Roll</button>
+                                </div>
+                                <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                                    <input readOnly value="pk_live_••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                    <button onClick={() => toast.error("Roll key to view new value")} style={{ background: 'none', border: 'none', padding: '0 10px', color: '#555' }}><Copy size={12} /></button>
+                                </div>
                             </div>
-                        )}
-                    </div>
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444' }}>Secret Key</label>
+                                    <button onClick={() => handleRegenerateKey('secret')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Roll</button>
+                                </div>
+                                <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                                    <input readOnly value="sk_live_••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                    <button onClick={() => toast.error("Roll key to view new value")} style={{ background: 'none', border: 'none', padding: '0 10px', color: '#555' }}><Copy size={12} /></button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Recent Logs Section */}
+                    <section>
+                        <SectionHeader title="Recent Activity" />
+                        <div className="glass-card" style={{ padding: '1rem', borderRadius: '12px' }}>
+                            <ProjectLogs logs={analytics?.logs?.slice(0, 5)} />
+                            <button onClick={() => navigate(`/project/${projectId}/analytics`)} className="btn btn-ghost" style={{ width: '100%', marginTop: '1rem', fontSize: '0.7rem', opacity: 0.6 }}>View Detailed Logs</button>
+                        </div>
+                    </section>
                 </div>
             </div>
 
             <style>{`
-                .collection-row {
-                    border-bottom: 1px solid var(--color-border);
-                    cursor: pointer;
-                    transition: background 0.2s;
-                }
-                .collection-row:last-child {
-                    border-bottom: none;
-                }
-                .collection-row:hover {
-                    background: var(--color-bg-input);
-                }
-                .collection-row:hover td {
-                    color: var(--color-text-main);
-                }
-                .collection-row:hover .row-icon, 
-                .collection-row:hover .row-arrow {
-                    color: var(--color-primary) !important;
-                }
-                .spin { animation: spin 1s linear infinite; }
+                .hover-row:hover { background: rgba(255,255,255,0.02); }
+                .hover-row:hover td { color: var(--color-primary); }
+                .spinner { width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.1); border-left-color: var(--color-primary); border-radius: 50%; animation: spin 1s linear infinite; }
                 @keyframes spin { 100% { transform: rotate(360deg); } }
-                .spinner {
-                    width: 20px;
-                    height: 20px;
-                    border: 2px solid rgba(255,255,255,0.1);
-                    border-left-color: var(--color-primary);
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                }
             `}</style>
         </div>
     );

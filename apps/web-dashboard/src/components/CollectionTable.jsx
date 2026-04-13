@@ -186,24 +186,28 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                         >
                             <Eye size={15} />
                         </button>
-                        <button
-                            className="btn-icon"
-                            onClick={() => onEdit(info.row.original)}
-                            onPointerDown={e => e.stopPropagation()}
-                            aria-label="Edit Record"
-                            title="Edit"
-                        >
-                            <Pencil size={15} />
-                        </button>
-                        <button
-                            className="btn-icon danger-hover"
-                            onClick={() => onDelete(info.row.original._id)}
-                            onPointerDown={e => e.stopPropagation()}
-                            aria-label="Delete Record"
-                            title="Delete"
-                        >
-                            <Trash2 size={15} />
-                        </button>
+                        {activeCollection?.name !== 'users' && (
+                            <>
+                                <button
+                                    className="btn-icon"
+                                    onClick={() => onEdit(info.row.original)}
+                                    onPointerDown={e => e.stopPropagation()}
+                                    aria-label="Edit Record"
+                                    title="Edit"
+                                >
+                                    <Pencil size={15} />
+                                </button>
+                                <button
+                                    className="btn-icon danger-hover"
+                                    onClick={() => onDelete(info.row.original._id)}
+                                    onPointerDown={e => e.stopPropagation()}
+                                    aria-label="Delete Record"
+                                    title="Delete"
+                                >
+                                    <Trash2 size={15} />
+                                </button>
+                            </>
+                        )}
                     </div>
                 ),
             },

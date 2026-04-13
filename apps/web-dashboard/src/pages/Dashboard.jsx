@@ -136,18 +136,7 @@ export default function Dashboard() {
       )}
 
       {/* Main Split Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '2rem' }} className="dashboard-split-layout">
-        <style>{`
-          @media (max-width: 1100px) {
-            .dashboard-split-layout {
-              grid-template-columns: 1fr !important;
-            }
-            .activity-sidebar {
-              display: none;
-            }
-          }
-        `}</style>
-
+      <div className="pro-grid">
         {/* Left Column: Projects */}
         <div>
           <SectionHeader title={searchTerm ? `Search Results (${filteredProjects.length})` : "Your Projects"} />
@@ -165,7 +154,7 @@ export default function Dashboard() {
         </div>
 
         {/* Right Column: Activity & Extras Sidebar */}
-        <div className="activity-sidebar">
+        <div className="sticky-sidebar">
           {/* 1. Usage Quota (Technical Context) */}
           <SectionHeader title="Plan & Usage" />
           <UsageQuota 

@@ -154,8 +154,30 @@ a {
   transition: width 0.5s ease;
 }
 
-.usage-bar-fill.warning { background: #FFBD2E; }
-.usage-bar-fill.danger { background: #ea5455; }
+/* --- RESPONSIVE PRO GRID --- */
+.pro-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .pro-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .sticky-sidebar {
+    position: static !important;
+    width: 100% !important;
+  }
+}
+
+.sticky-sidebar {
+  position: sticky;
+  top: calc(var(--header-height) + 1rem);
+}
 
 /* Scrollbar Styling */
 ::-webkit-scrollbar {

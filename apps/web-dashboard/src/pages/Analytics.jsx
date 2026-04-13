@@ -2,8 +2,29 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../utils/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Activity, HardDrive, Server, Database, RefreshCw, Clock, Globe } from 'lucide-react';
-import { API_URL } from '../config';
+import { Activity, HardDrive, Database, RefreshCw, Clock, Globe, Zap } from 'lucide-react';
+import SectionHeader from '../components/Dashboard/SectionHeader';
+
+const getStatusColor = (status) => {
+    if (status >= 500) return '#ef4444';
+    if (status >= 400) return '#f59e0b';
+    if (status >= 300) return '#3b82f6';
+    return '#22c55e';
+};
+
+const formatBytes = (bytes) => {
+    if (!bytes) return '0 MB';
+    if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+};
+
+const METHOD_COLORS = {
+    GET: '#60a5fa',
+    POST: '#34d399',
+    PATCH: '#a78bfa',
+    PUT: '#a78bfa',
+    DELETE: '#ef4444',
+};
 
 export default function Analytics() {
     const { projectId } = useParams();
@@ -24,289 +45,221 @@ export default function Analytics() {
         }
     }, [projectId]);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-      const SkeletonLoader = () => (
-        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem' }}>
-
-            {/* Stats Cards Skeleton */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+    if (loading) return (
+        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            {/* Skeleton */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div className="skeleton" style={{ width: '140px', height: '18px' }} />
+                <div className="skeleton" style={{ width: '80px', height: '28px', borderRadius: '4px' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                 {[1,2,3].map(i => (
-                    <div key={i} className="card" style={{ padding: '1rem', position: 'relative' }}>
-                        <div className="skeleton skeleton-text" style={{ width: '40%', height: '16px' }} />
-                        <div className="skeleton skeleton-text" style={{ width: '60%', height: '36px', marginTop: '8px' }} />
-                        <div className="skeleton skeleton-text" style={{ width: '100%', height: '6px', marginTop: '12px' }} />
+                    <div key={i} className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
+                        <div className="skeleton" style={{ width: '50%', height: '12px', marginBottom: '8px' }} />
+                        <div className="skeleton" style={{ width: '70%', height: '28px' }} />
+                        <div className="skeleton" style={{ width: '100%', height: '4px', marginTop: '10px' }} />
                     </div>
                 ))}
             </div>
-
-            {/* Chart & Logs Skeleton */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
-                
-                {/* Chart Skeleton */}
-                <div className="card" style={{ height: '400px', padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-                    <div className="skeleton skeleton-text" style={{ width: '50%', height: '16px', marginBottom: '12px' }} />
-                    <div className="skeleton skeleton-text" style={{ width: '100%', height: '340px' }} />
-                </div>
-
-                {/* Logs Skeleton */}
-                <div className="card" style={{ height: '400px', padding: '1.5rem', overflowY: 'auto' }}>
-                    {[1,2,3,4,5,6,7,8,9,10].map(i => (
-                        <div key={i} className="skeleton-row">
-                            <div className="skeleton skeleton-text" style={{ width: '100%' }} />
-                        </div>
-                    ))}
-                </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="glass-card" style={{ height: '340px', borderRadius: '8px' }} />
+                <div className="glass-card" style={{ height: '340px', borderRadius: '8px' }} />
             </div>
         </div>
     );
 
-    // Helper to format bytes
-    const formatBytes = (bytes) => {
-        if (!bytes) return '0 MB';
-        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-    };
-
-    // Helper for Status Color
-    const getStatusColor = (status) => {
-        if (status >= 500) return '#ef4444'; // Red
-        if (status >= 400) return '#f59e0b'; // Yellow
-        if (status >= 300) return '#3b82f6'; // Blue
-        return '#22c55e'; // Green
-    };
+    const storagePercent = Math.min(((data?.storage?.used || 0) / (data?.storage?.limit || 1)) * 100, 100);
+    const dbPercent = Math.min(((data?.database?.used || 0) / (data?.database?.limit || 1)) * 100, 100);
 
     return (
-        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem' }}>
-            {/* Header with Refresh */}
-            <div className="page-header" style={{ marginBottom: '2.5rem', borderBottom: 'none' }}>
-                <div>
-                    <h1 className="page-title" style={{ fontSize: '2rem', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>Analytics</h1>
-                    <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Real-time usage metrics and logs.</p>
+        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '3rem' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'rgba(62, 207, 142, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(62, 207, 142, 0.15)' }}>
+                        <Activity size={16} color="var(--color-primary)" />
+                    </div>
+                    <div>
+                        <h1 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Analytics</h1>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Real-time usage metrics and request logs</p>
+                    </div>
                 </div>
                 <button
                     onClick={fetchData}
                     className="btn btn-secondary"
                     disabled={refreshing}
-                    style={{ minWidth: '100px', display: 'flex', justifyContent: 'center' }}
+                    style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', gap: '5px' }}
                 >
-                    <RefreshCw size={16} className={refreshing ? 'spin' : ''} style={{ marginRight: '8px' }} />
-                    {refreshing ? 'Updating' : 'Refresh'}
+                    <RefreshCw size={12} className={refreshing ? 'spin' : ''} />
+                    {refreshing ? 'Updating...' : 'Refresh'}
                 </button>
             </div>
 
-              {/* Main Content with Skeleton*/}
-            {loading ? (
-                <SkeletonLoader />
-            ) : (
-                <>
-            {/* Stats Cards Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-
-                {/* 1. Total Requests */}
-                <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: '-10px', right: '-10px', opacity: 0.05, transform: 'rotate(15deg)' }}>
-                        <Activity size={100} />
+            {/* Stats Row — 3 compact cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                
+                {/* Total Requests */}
+                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: '-8px', right: '-8px', opacity: 0.04 }}>
+                        <Zap size={80} />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>
-                        <Globe size={16} /> Total Requests
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', marginBottom: '6px', fontSize: '0.7rem', fontWeight: 500 }}>
+                        <Globe size={12} /> Total Requests
                     </div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: '700', color: '#fff', letterSpacing: '-1px' }}>
-                        {data.totalRequests.toLocaleString()}
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-1px', lineHeight: 1 }}>
+                        {(data?.totalRequests || 0).toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                        All-time API hits
-                    </div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>All-time API hits</div>
                 </div>
 
-                {/* 2. File Storage */}
-                <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>
-                            <HardDrive size={16} /> File Storage
+                {/* File Storage */}
+                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', fontSize: '0.7rem', fontWeight: 500 }}>
+                            <HardDrive size={12} /> File Storage
                         </div>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{formatBytes(data.storage.limit)} Limit</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>{formatBytes(data?.storage?.limit)} limit</span>
                     </div>
-                    <div style={{ fontSize: '1.8rem', fontWeight: '700', marginBottom: '12px' }}>
-                        {formatBytes(data.storage.used)}
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: 1, marginBottom: '8px' }}>
+                        {formatBytes(data?.storage?.used)}
                     </div>
-                    {/* Progress Bar */}
-                    <div style={{ width: '100%', height: '6px', background: 'var(--color-bg-input)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{
-                            width: `${Math.min((data.storage.used / data.storage.limit) * 100, 100)}%`,
-                            height: '100%',
-                            background: 'linear-gradient(90deg, var(--color-primary), #34d399)',
-                            borderRadius: '3px',
-                            transition: 'width 0.5s ease'
-                        }}></div>
+                    <div style={{ width: '100%', height: '4px', background: 'var(--color-bg-input)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: `${storagePercent}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-primary), #34d399)', borderRadius: '2px', transition: 'width 0.5s ease' }} />
                     </div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>{storagePercent.toFixed(1)}% used</div>
                 </div>
 
-                {/* 3. Database Size */}
-                <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>
-                            <Database size={16} /> Database Size
+                {/* Database Size */}
+                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', fontSize: '0.7rem', fontWeight: 500 }}>
+                            <Database size={12} /> Database Size
                         </div>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{formatBytes(data.database?.limit)} Limit</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>{formatBytes(data?.database?.limit)} limit</span>
                     </div>
-                    <div style={{ fontSize: '1.8rem', fontWeight: '700', marginBottom: '12px' }}>
-                        {formatBytes(data.database?.used || 0)}
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: 1, marginBottom: '8px' }}>
+                        {formatBytes(data?.database?.used || 0)}
                     </div>
-                    {/* Progress Bar */}
-                    <div style={{ width: '100%', height: '6px', background: 'var(--color-bg-input)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{
-                            width: `${Math.min(((data.database?.used || 0) / (data.database?.limit || 1)) * 100, 100)}%`,
-                            height: '100%',
-                            background: ((data.database?.used || 0) / (data.database?.limit || 1)) > 0.8 ? '#ef4444' : 'linear-gradient(90deg, #3b82f6, #60a5fa)',
-                            borderRadius: '3px',
-                            transition: 'width 0.5s ease'
-                        }}></div>
+                    <div style={{ width: '100%', height: '4px', background: 'var(--color-bg-input)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: `${dbPercent}%`, height: '100%', background: dbPercent > 80 ? '#ef4444' : 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: '2px', transition: 'width 0.5s ease' }} />
                     </div>
+                    <div style={{ fontSize: '0.65rem', color: dbPercent > 80 ? '#ef4444' : 'var(--color-text-muted)', marginTop: '4px' }}>{dbPercent.toFixed(1)}% used</div>
                 </div>
             </div>
 
-            {/* Main Content Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
+            {/* Main content: chart + logs side by side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
 
                 {/* Traffic Chart */}
-                <div className="card" style={{ height: '400px', padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 600 }}>Traffic Overview</h3>
-                    <div style={{ flex: 1, minHeight: 0 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data.chartData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                                <XAxis
-                                    dataKey="_id"
-                                    stroke="var(--color-text-muted)"
-                                    fontSize={11}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    dy={10}
-                                />
-                                <YAxis
-                                    stroke="var(--color-text-muted)"
-                                    fontSize={11}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    allowDecimals={false}
-                                />
-                                <Tooltip
-                                    cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                                    contentStyle={{ backgroundColor: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '8px', color: '#fff' }}
-                                />
-                                <Bar
-                                    dataKey="count"
-                                    fill="var(--color-primary)"
-                                    radius={[4, 4, 0, 0]}
-                                    barSize={40}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
+                <div>
+                    <SectionHeader title="Traffic Overview (7d)" />
+                    <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px', height: '300px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ flex: 1, minHeight: 0 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={data?.chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                                    <XAxis
+                                        dataKey="_id"
+                                        stroke="var(--color-text-muted)"
+                                        fontSize={9}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        dy={8}
+                                    />
+                                    <YAxis
+                                        stroke="var(--color-text-muted)"
+                                        fontSize={9}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        allowDecimals={false}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                                        contentStyle={{ backgroundColor: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '6px', color: '#fff', fontSize: '0.75rem' }}
+                                    />
+                                    <Bar dataKey="count" fill="var(--color-primary)" radius={[3, 3, 0, 0]} barSize={28} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
 
-                {/* Recent Logs List */}
-                <div className="card" style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '400px', overflow: 'hidden' }}>
-                    <div style={{ padding: '1.2rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Clock size={18} /> Recent Logs
-                        </h3>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Latest 50</span>
-                    </div>
-
-                    <div style={{ overflowY: 'auto', flex: 1 }} className="custom-scrollbar">
-                        <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
-                            <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--color-bg-card)', zIndex: 1, boxShadow: '0 1px 0 var(--color-border)' }}>
-                                <tr style={{ textAlign: 'left', color: 'var(--color-text-muted)' }}>
-                                    <th style={{ padding: '10px 16px', fontWeight: 600, width: '80px' }}>Status</th>
-                                    <th style={{ padding: '10px 16px', fontWeight: 600, width: '80px' }}>Method</th>
-                                    <th style={{ padding: '10px 16px', fontWeight: 600 }}>Path</th>
-                                    <th style={{ padding: '10px 16px', fontWeight: 600, textAlign: 'right', width: '100px' }}>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.logs.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                            No recent activity
-                                        </td>
+                {/* Recent Logs */}
+                <div>
+                    <SectionHeader title="Recent Logs" />
+                    <div className="glass-card" style={{ borderRadius: '8px', overflow: 'hidden', height: '300px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ overflowY: 'auto', flex: 1 }} className="custom-scrollbar">
+                            <table style={{ width: '100%', fontSize: '0.73rem', borderCollapse: 'collapse' }}>
+                                <thead style={{ position: 'sticky', top: 0, background: 'var(--color-bg-card)', zIndex: 1, boxShadow: '0 1px 0 var(--color-border)' }}>
+                                    <tr style={{ textAlign: 'left', color: 'var(--color-text-muted)', fontSize: '0.65rem', textTransform: 'uppercase' }}>
+                                        <th style={{ padding: '7px 10px', fontWeight: 600, width: '60px' }}>Status</th>
+                                        <th style={{ padding: '7px 10px', fontWeight: 600, width: '55px' }}>Method</th>
+                                        <th style={{ padding: '7px 10px', fontWeight: 600 }}>Path</th>
+                                        <th style={{ padding: '7px 10px', fontWeight: 600, textAlign: 'right', width: '60px' }}>Time</th>
                                     </tr>
-                                ) : (
-                                    data.logs.map((log) => (
-                                        <tr key={log._id} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.2s' }} className="log-row">
-                                            <td style={{ padding: '12px 16px' }}>
-                                                <span style={{
-                                                    color: getStatusColor(log.status),
-                                                    backgroundColor: `${getStatusColor(log.status)}15`,
-                                                    padding: '2px 8px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: '700',
-                                                    border: `1px solid ${getStatusColor(log.status)}30`
-                                                }}>
-                                                    {log.status}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '12px 16px', fontWeight: 600 }}>
-                                                <span style={{
-                                                    color: log.method === 'GET' ? '#60a5fa' :
-                                                        log.method === 'POST' ? '#34d399' :
-                                                            log.method === 'DELETE' ? '#ef4444' : '#a78bfa'
-                                                }}>{log.method}</span>
-                                            </td>
-                                            <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: 'var(--color-text-main)' }}>
-                                                {log.path.replace('/api/', '/')}
-                                            </td>
-                                            <td style={{ padding: '12px 16px', color: 'var(--color-text-muted)', textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
-                                                {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </thead>
+                                <tbody>
+                                    {(!data?.logs || data.logs.length === 0) ? (
+                                        <tr>
+                                            <td colSpan="4" style={{ padding: '1rem 10px', textAlign: 'left', color: 'var(--color-text-muted)', fontSize: '0.72rem' }}>
+                                                No recent activity
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                    ) : (
+                                        data.logs.map((log) => (
+                                            <tr key={log._id} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.15s' }} className="log-row">
+                                                <td style={{ padding: '5px 10px' }}>
+                                                    <span style={{
+                                                        color: getStatusColor(log.status),
+                                                        backgroundColor: `${getStatusColor(log.status)}15`,
+                                                        padding: '1px 5px',
+                                                        borderRadius: '3px',
+                                                        fontSize: '0.65rem',
+                                                        fontWeight: 700,
+                                                        border: `1px solid ${getStatusColor(log.status)}25`
+                                                    }}>
+                                                        {log.status}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '5px 10px', fontWeight: 600, fontSize: '0.68rem' }}>
+                                                    <span style={{ color: METHOD_COLORS[log.method] || '#fff' }}>{log.method}</span>
+                                                </td>
+                                                <td style={{ padding: '5px 10px', fontFamily: 'monospace', fontSize: '0.7rem', color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
+                                                    {log.path.replace('/api/', '/')}
+                                                </td>
+                                                <td style={{ padding: '5px 10px', color: 'var(--color-text-muted)', textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.65rem' }}>
+                                                    {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style={{ padding: '6px 10px', borderTop: '1px solid var(--color-border)', fontSize: '0.65rem', color: 'var(--color-text-muted)', textAlign: 'right' }}>
+                            Showing latest {data?.logs?.length || 0} entries
+                        </div>
                     </div>
                 </div>
             </div>
-         </>
-        )}
 
-            
             <style>{`
-            /* Inline Styles for Spin Animation & Hover */
-
                 .spin { animation: spin 1s linear infinite; }
                 @keyframes spin { 100% { transform: rotate(360deg); } }
-                .log-row:hover { background-color: var(--color-bg-input); }
-            
-            /* Loading states */
-
+                .log-row:hover { background-color: rgba(255,255,255,0.015); }
                 .skeleton {
-                    position: relative;
-                    overflow: hidden;
-                    background: rgba(255,255,255,0.05);
+                    position: relative; overflow: hidden;
+                    background: linear-gradient(90deg, #1c1c1c 25%, #2a2a2a 50%, #1c1c1c 75%);
+                    background-size: 200% 100%;
+                    animation: skeleton-loading 1.5s infinite;
                     border-radius: 4px;
                 }
-
-                .skeleton::after {
-                    content: '';
-                    position: absolute;
-                    top: 0; left: -150%;
-                    width: 150%; height: 100%;
-                    background: linear-gradient(
-                    90deg,
-                    transparent,
-                    rgba(255,255,255,0.08),
-                    transparent
-                    );
-                    animation: shimmer 1.8s infinite;
+                @keyframes skeleton-loading { 
+                    0% { background-position: 200% 0; }
+                    100% { background-position: -200% 0; }
                 }
-
-                @keyframes shimmer {
-                    100% { left: 150%; }
-                }   
             `}</style>
         </div>
     );
