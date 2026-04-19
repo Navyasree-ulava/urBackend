@@ -39,6 +39,31 @@
   --glass-backdrop: blur(12px);
 }
 
+.light-mode {
+  --color-primary: #3ECF8E;
+  --color-primary-hover: #2fb67a;
+
+  --color-bg-main: #ffffff;
+  --color-bg-sidebar: #f8f9fa;
+  --color-bg-card: #ffffff;
+  --color-bg-input: #f1f3f5;
+
+  --color-text-main: #111111;
+  --color-text-muted: #666666;
+
+  --color-border: #e5e7eb;
+  --color-border-hover: #d1d5db;
+
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+
+  --color-overlay: rgba(0, 0, 0, 0.4);
+
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-backdrop: blur(10px);
+}
+
 * {
   margin: 0;
   padding: 0;
