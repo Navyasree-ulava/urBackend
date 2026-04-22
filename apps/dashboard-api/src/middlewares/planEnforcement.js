@@ -78,7 +78,7 @@ exports.checkCollectionLimit = async (req, res, next) => {
 
         // For collection creation, the projectId is usually in req.body
         const projectId = req.body.projectId;
-        if (!projectId) return next();
+        if (!projectId) return next(new AppError(400, 'projectId is required'));
 
         const project = await Project.findById(projectId);
         if (!project) return next(new AppError(404, 'Project not found'));
