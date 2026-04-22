@@ -72,7 +72,7 @@ function mergeNullableOverrides(base, overrides) {
  * than the plan default. Legacy limits are admin-granted exceptions (e.g., 
  * "allow this user 5 projects even on free"). They must never reduce a paid
  * plan's higher entitlement (e.g., Pro allows 10 projects — a legacy value
- * of 1 or 20 must NOT override that).
+ * of 1 must NOT override that, but a legacy value of 20 WILL override it to maintain the exception).
  */
 function mergeLegacyOverrides(base, legacyLimits) {
   if (!legacyLimits) return base;
