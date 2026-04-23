@@ -19,7 +19,7 @@ Uploads use a presigned URL three-step flow so the binary is sent directly to st
 
 **Endpoint:** `POST /api/storage/upload-request`
 
-**Request body:**
+**Request body (size in bytes):**
 
 ```json
 {
@@ -54,13 +54,17 @@ Uploads use a presigned URL three-step flow so the binary is sent directly to st
 Send a `PUT` request to `signedUrl` with the raw file contents and the correct `Content-Type` header.
 
 ```javascript
-await fetch(signedUrl, {
+const uploadRes = await fetch(signedUrl, {
   method: 'PUT',
   headers: {
     'Content-Type': file.type
   },
   body: file
 });
+
+if (!uploadRes.ok) {
+  throw new Error(`Upload failed: ${uploadRes.status} ${uploadRes.statusText}`);
+}
 ```
 
 ### Step 3 — Confirm the upload
@@ -94,6 +98,10 @@ If the storage provider does not expose a public URL (for example, some external
 ### Full browser example
 
 ```javascript
+if (!fileInput?.files?.length) {
+  throw new Error('No file selected');
+}
+
 const file = fileInput.files[0];
 
 const requestRes = await fetch('https://api.ub.bitbros.in/api/storage/upload-request', {
@@ -111,11 +119,15 @@ const requestRes = await fetch('https://api.ub.bitbros.in/api/storage/upload-req
 
 const { signedUrl, filePath } = await requestRes.json();
 
-await fetch(signedUrl, {
+const uploadRes = await fetch(signedUrl, {
   method: 'PUT',
   headers: { 'Content-Type': file.type },
   body: file
 });
+
+if (!uploadRes.ok) {
+  throw new Error(`Upload failed: ${uploadRes.status} ${uploadRes.statusText}`);
+}
 
 const confirmRes = await fetch('https://api.ub.bitbros.in/api/storage/upload-confirm', {
   method: 'POST',
