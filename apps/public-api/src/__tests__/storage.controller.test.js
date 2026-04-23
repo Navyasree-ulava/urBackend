@@ -450,6 +450,31 @@ describe('storage.controller', () => {
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
         });
 
+        test('confirmUpload accepts small declared size drift within tolerance', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockResolvedValue(2048);
+            Project.updateOne.mockResolvedValue({ matchedCount: 1 });
+            mockStorageFrom.getPublicUrl.mockReturnValue({ data: { publicUrl: 'https://mock.supabase.co/project_id_1/file.txt' } });
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2100 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(Project.updateOne).toHaveBeenCalledWith(
+                {
+                    _id: 'project_id_1',
+                    $or: [
+                        { storageLimit: -1 },
+                        { $expr: { $lte: [{ $add: ['$storageUsed', 2048] }, '$storageLimit'] } }
+                    ]
+                },
+                { $inc: { storageUsed: 2048 } }
+            );
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ path: 'project_id_1/file.txt', provider: 'internal' }));
+        });
+
         test('confirmUpload removes uploaded object when quota reservation fails', async () => {
             isProjectStorageExternal.mockReturnValue(false);
             verifyUploadedFile.mockResolvedValue(2048);

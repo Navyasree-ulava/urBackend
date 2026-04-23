@@ -5,6 +5,7 @@ const { getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("../
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024; // 100MB safety ceiling for internal storage
+const CONFIRM_UPLOAD_SIZE_TOLERANCE_BYTES = 64;
 
 const getEffectiveStorageLimit = (project, req) => {
     const limits = req.planLimits || {};
@@ -377,7 +378,7 @@ module.exports.confirmUpload = async (req, res) => {
             return res.status(500).json({ error: "Upload confirmation failed", details: process.env.NODE_ENV === "development" ? "Uploaded file size could not be determined" : undefined });
         }
 
-        if (actualSize !== declaredSize) {
+        if (Math.abs(actualSize - declaredSize) > CONFIRM_UPLOAD_SIZE_TOLERANCE_BYTES) {
             await bestEffortDeleteUploadedObject(project, normalizedPath);
             return res.status(400).json({ error: "Declared file size does not match uploaded file size." });
         }
