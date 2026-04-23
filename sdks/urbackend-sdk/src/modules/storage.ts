@@ -83,7 +83,7 @@ export class StorageModule {
     // figure out name, contentType and size depending on environment
     let resolvedName = filename || "file";
     let contentType = "application/octet-stream";
-    let fileSize = 0;
+    let fileSize: number;
     let fileData: Blob | BufferSource;
 
     if (typeof File !== "undefined" && file instanceof File) {
