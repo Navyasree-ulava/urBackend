@@ -42,7 +42,13 @@ def _parse_api_error(response: requests.Response) -> UrBackendError:
     try:
         data: Any = response.json()
         if isinstance(data, dict):
-            message = data.get("message", message)
+            # standardizeApiResponse puts the message in "error" for 4xx/5xx;
+            # some controllers also use "message" directly.
+            message = (
+                data.get("error")
+                or data.get("message")
+                or message
+            )
     except (ValueError, KeyError):
         message = response.reason or message
 

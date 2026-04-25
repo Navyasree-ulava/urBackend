@@ -217,7 +217,13 @@ class DatabaseModule:
         path = f"/api/data/{collection}"
         try:
             result = self._http.request("GET", path, params=params or None, token=token)
-            return result if isinstance(result, list) else []
+            # Backend returns { items: [...], total, page, limit } after
+            # the http layer unwraps the { success, data, message } envelope.
+            if isinstance(result, dict) and "items" in result:
+                return result["items"]
+            if isinstance(result, list):
+                return result
+            return []
         except NotFoundError:
             return []
 

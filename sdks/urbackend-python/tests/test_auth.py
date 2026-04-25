@@ -1,5 +1,7 @@
 """Tests for AuthModule — all HTTP calls mocked with 'responses'."""
 
+import json
+
 import pytest
 import responses as rsps_lib
 
@@ -42,7 +44,6 @@ class TestSignUp:
             status=201,
         )
         auth.sign_up("a@b.com", "pass", username="dev", preferences={"theme": "dark"})
-        import json
         body = json.loads(rsps_lib.calls[0].request.body)
         assert body["preferences"] == {"theme": "dark"}
 
@@ -135,7 +136,6 @@ class TestSocialAuth:
             json={"success": True, "data": {"refreshToken": "rt_abc"}, "message": ""},
             status=200,
         )
-        import json
         result = auth.social_exchange("rt_code_abc", "one_time_tok")
         body = json.loads(rsps_lib.calls[0].request.body)
         assert body["rtCode"] == "rt_code_abc"
@@ -153,7 +153,6 @@ class TestPasswordReset:
             status=200,
         )
         auth.request_password_reset("alice@example.com")
-        import json
         body = json.loads(rsps_lib.calls[0].request.body)
         assert body["email"] == "alice@example.com"
 
@@ -166,7 +165,6 @@ class TestPasswordReset:
             status=200,
         )
         auth.reset_password("alice@example.com", "123456", "N3wP@ss!")
-        import json
         body = json.loads(rsps_lib.calls[0].request.body)
         assert body["otp"] == "123456"
         assert body["newPassword"] == "N3wP@ss!"

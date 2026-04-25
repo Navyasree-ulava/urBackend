@@ -6,7 +6,7 @@ Requires a Secret Key (``sk_live_...``). Never use this from client-facing code.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from .http import UrBackendHTTP
 
@@ -34,11 +34,13 @@ class MailModule:
 
     def send(
         self,
-        to: str,
+        to: Union[str, List[str]],
         *,
         template_name: Optional[str] = None,
+        template_id: Optional[str] = None,
         variables: Optional[Dict[str, Any]] = None,
         subject: Optional[str] = None,
+        text: Optional[str] = None,
         html: Optional[str] = None,
         from_address: Optional[str] = None,
         cc: Optional[List[str]] = None,
@@ -46,22 +48,26 @@ class MailModule:
     ) -> Dict[str, Any]:
         """Send a transactional email via urBackend.
 
-        Use either a ``template_name`` (recommended) or raw ``subject`` + ``html``.
+        Use either a ``template_name``/``template_id`` (recommended) or raw
+        ``subject`` + at least one of ``text`` / ``html``.
 
         Args:
-            to: Recipient email address.
-            template_name: Named template (``"welcome"``, ``"otp"``,
-                ``"password-reset"``, ``"invite"``, ``"welcome-2"``).
+            to: Recipient email address or list of addresses.
+            template_name: Named template slug — e.g. ``"welcome"``, ``"otp"``,
+                ``"password-reset"``, ``"invite"``, ``"welcome-2"``.
+            template_id: Template ObjectId (alternative to ``template_name``).
             variables: Template variable substitutions, e.g.
                 ``{"name": "Alice", "projectName": "Acme", "appUrl": "..."}``.
             subject: Email subject (used when not using a template).
+            text: Plain-text body (used when not using a template).
             html: HTML body (used when not using a template).
             from_address: Override sender address.
             cc: List of CC recipient addresses.
             bcc: List of BCC recipient addresses.
 
         Returns:
-            Dict with at least a ``messageId`` field on success.
+            Dict with ``id``, ``provider``, ``monthlyUsage``, and
+            ``monthlyLimit`` keys.
 
         Raises:
             AuthError: Secret key missing or invalid.
@@ -84,10 +90,14 @@ class MailModule:
 
         if template_name is not None:
             payload["templateName"] = template_name
+        if template_id is not None:
+            payload["templateId"] = template_id
         if variables is not None:
             payload["variables"] = variables
         if subject is not None:
             payload["subject"] = subject
+        if text is not None:
+            payload["text"] = text
         if html is not None:
             payload["html"] = html
         if from_address is not None:

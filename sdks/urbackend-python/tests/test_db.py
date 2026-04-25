@@ -27,7 +27,7 @@ class TestGetAll:
         rsps_lib.add(
             rsps_lib.GET,
             f"{BASE}/api/data/posts",
-            json={"success": True, "data": [{"_id": "1"}, {"_id": "2"}], "message": ""},
+            json={"success": True, "data": {"items": [{"_id": "1"}, {"_id": "2"}], "total": 2, "page": 1, "limit": 50}, "message": ""},
             status=200,
         )
         result = db.get_all("posts")
@@ -50,7 +50,7 @@ class TestGetAll:
         rsps_lib.add(
             rsps_lib.GET,
             f"{BASE}/api/data/products",
-            json={"success": True, "data": [], "message": ""},
+            json={"success": True, "data": {"items": [], "total": 0, "page": 1, "limit": 10}, "message": ""},
             status=200,
         )
         db.get_all("products", filter={"status": "active"}, limit=10, sort="price:asc")
@@ -64,7 +64,7 @@ class TestGetAll:
         rsps_lib.add(
             rsps_lib.GET,
             f"{BASE}/api/data/orders",
-            json={"success": True, "data": [], "message": ""},
+            json={"success": True, "data": {"items": [], "total": 0, "page": 1, "limit": 50}, "message": ""},
             status=200,
         )
         db.get_all("orders", populate=["user", "product"])
@@ -172,7 +172,7 @@ class TestCollectionRef:
         rsps_lib.add(
             rsps_lib.GET,
             f"{BASE}/api/data/posts",
-            json={"success": True, "data": [{"_id": "1"}], "message": ""},
+            json={"success": True, "data": {"items": [{"_id": "1"}], "total": 1, "page": 1, "limit": 50}, "message": ""},
             status=200,
         )
         result = db.collection("posts").find({"status": "published"})

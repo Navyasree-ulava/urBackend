@@ -172,10 +172,8 @@ class UrBackendClient:
     ) -> "UrBackendClient":
         """Re-initialise the client with a new API key / base URL.
 
-        This is provided for frameworks that prefer a two-step init pattern::
-
-            client = UrBackendClient.__new__(UrBackendClient)
-            client.connect(api_key="pk_live_...", base_url="https://...")
+        Useful for frameworks that prefer a two-step init pattern or for
+        switching between projects at runtime.
 
         Args:
             api_key: New API key.
@@ -185,11 +183,29 @@ class UrBackendClient:
             ``self`` for chaining.
 
         Example:
-            >>> client = UrBackendClient("")
-            ... # later, after reading config:
-            >>> client.connect("pk_live_xxx")
+            >>> client = UrBackendClient(api_key="pk_live_old")
+            >>> client.connect("pk_live_new")  # now uses new key
         """
-        self.__init__(api_key=api_key, base_url=base_url)  # type: ignore[misc]
+        if not api_key:
+            raise ValueError("api_key must not be empty.")
+
+        if api_key.startswith("sk_live_"):
+            warnings.warn(
+                "\u26a0\ufe0f  urbackend-sdk: You are initialising the client with a Secret "
+                "Key (sk_live_...). Never use this in client-facing code.",
+                stacklevel=2,
+            )
+
+        # Replace the shared HTTP session
+        self._http.close()
+        self._http = UrBackendHTTP(api_key=api_key, base_url=base_url)
+
+        # Reset lazy modules — they'll be recreated with the new http on next access
+        self._auth = None
+        self._db = None
+        self._storage = None
+        self._mail = None
+
         return self
 
     def close(self) -> None:

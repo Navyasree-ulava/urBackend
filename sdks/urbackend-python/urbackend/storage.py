@@ -15,6 +15,7 @@ from typing import Any, BinaryIO, Dict, Optional, Union
 
 import requests
 
+from .exceptions import StorageError
 from .http import UrBackendHTTP
 
 
@@ -128,8 +129,10 @@ class StorageModule:
             timeout=120,
         )
         if not put_resp.ok:
-            raise RuntimeError(
-                f"Direct cloud upload failed: {put_resp.status_code} {put_resp.reason}"
+            raise StorageError(
+                f"Cloud provider upload failed: {put_resp.status_code} {put_resp.reason}",
+                put_resp.status_code,
+                "/api/storage/upload",
             )
 
         # Step 3 — confirm upload
