@@ -8,6 +8,7 @@ const { validateData, validateUpdateData, aggregateSchema } = require("@urbacken
 const { performance } = require('perf_hooks');
 const { dispatchWebhooks } = require('../utils/webhookDispatcher');
 const { z } = require("zod");
+const AppError = require("../utils/AppError");
 
 const isDebug = process.env.DEBUG === 'true';
 
@@ -97,35 +98,44 @@ module.exports.insertData = async (req, res) => {
 };
 
 // BULK INSERT DATA
-module.exports.bulkInsertData = async (req, res) => {
+
+  module.exports.bulkInsertData = async (req, res, next) => {
   try {
-    let start;
-    if (isDebug) start = performance.now();
+    const MAX_BULK_INSERT_LIMIT = 100;
 
     const { collectionName } = req.params;
     const project = req.project;
     const incomingData = req.body;
 
     if (!Array.isArray(incomingData)) {
-      return res.status(400).json({
-        error: "Request body must be an array of objects",
-      });
+      return next(new AppError("Request body must be an array of objects", 400));
+    }
+
+    if (incomingData.length === 0) {
+      return next(new AppError("Request body cannot be empty", 400));
+    }
+
+    if (incomingData.length > MAX_BULK_INSERT_LIMIT) {
+      return next(
+        new AppError(`Maximum ${MAX_BULK_INSERT_LIMIT} records allowed`, 400)
+      );
     }
 
     const collectionConfig = project.collections.find(
-      (c) => c.name === collectionName,
+      (c) => c.name === collectionName
     );
 
     if (!collectionConfig) {
-      return res.status(404).json({ error: "Collection not found" });
+      return next(new AppError("Collection not found", 404));
     }
 
     const schemaRules = collectionConfig.model;
+
     const validData = [];
     const invalidIndices = [];
 
     incomingData.forEach((item, index) => {
-      if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
         invalidIndices.push(index);
         return;
       }
@@ -140,20 +150,9 @@ module.exports.bulkInsertData = async (req, res) => {
     });
 
     if (invalidIndices.length > 0) {
-      return res.status(400).json({
-        error: "Some records are invalid",
-        invalidIndices,
-      });
-    }
-
-    let totalSize = 0;
-
-    if (!project.resources.db.isExternal) {
-      totalSize = Buffer.byteLength(JSON.stringify(validData));
-
-      if ((project.databaseUsed || 0) + totalSize > project.databaseLimit) {
-        return res.status(403).json({ error: "Database limit exceeded." });
-      }
+      return next(
+        new AppError(`Invalid records at index: ${invalidIndices.join(", ")}`, 400)
+      );
     }
 
     const connection = await getConnection(project._id);
@@ -161,46 +160,21 @@ module.exports.bulkInsertData = async (req, res) => {
       connection,
       collectionConfig,
       project._id,
-      project.resources.db.isExternal,
+      project.resources.db.isExternal
     );
 
-    const result = await Model.insertMany(validData, { ordered: false });
-
-    if (!project.resources.db.isExternal) {
-      await Project.updateOne(
-        { _id: project._id },
-        { $inc: { databaseUsed: totalSize } },
-      );
-    }
-
-    result.forEach((doc) => {
-      dispatchWebhooks({
-        projectId: project._id,
-        collection: collectionName,
-        action: 'insert',
-        document: doc.toObject ? doc.toObject() : doc,
-        documentId: doc._id,
-      });
-    });
-
-    if (isDebug) console.log(`[DEBUG] bulk insert took ${(performance.now() - start).toFixed(2)}ms`);
+    const result = await Model.insertMany(validData, { ordered: true });
 
     return res.status(201).json({
       success: true,
-      insertedCount: result.length,
-      data: result,
+      data: {
+        insertedCount: result.length,
+      },
+      message: "Bulk insert successful",
     });
   } catch (err) {
     console.error(err);
-
-    if (isDuplicateKeyError(err)) {
-      return res.status(409).json({
-        error: "Duplicate value violates unique constraint.",
-        details: err.message,
-      });
-    }
-
-    res.status(500).json({ error: err.message });
+    return next(new AppError("Failed to insert bulk data", 500));
   }
 };
 

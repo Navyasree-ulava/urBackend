@@ -59,28 +59,37 @@ module.exports = async (req, res, next) => {
 
             const bodyItems = Array.isArray(req.body) ? req.body : [req.body];
 
-            for (const item of bodyItems) {
-                if (!item || typeof item !== 'object' || Array.isArray(item)) {
-                    return res.status(400).json({
-                        error: 'Invalid request body',
-                        message: 'Request body must be an object or an array of objects.'
-                    });
-                }
+          if (bodyItems.length === 0) {
+    return res.status(400).json({
+        error: 'Invalid request body',
+        message: 'Request body cannot be an empty array.'
+    });
+}
 
-                const incomingOwner = item?.[ownerField];
+for (let i = 0; i < bodyItems.length; i++) {
+    const item = bodyItems[i];
 
-                if (incomingOwner === undefined || incomingOwner === null || incomingOwner === '') {
-                    item[ownerField] = authUserId;
-                    continue;
-                }
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return res.status(400).json({
+            error: 'Invalid request body',
+           message: `Item at index ${i} must be a valid object`
+        });
+    }
 
-                if (String(incomingOwner) !== authUserId) {
-                    return res.status(403).json({
-                        error: 'RLS owner mismatch',
-                        message: `You can only create documents with ${ownerField} equal to your user id.`
-                    });
-                }
-            }
+    const incomingOwner = item?.[ownerField];
+
+    if (incomingOwner === undefined || incomingOwner === null || incomingOwner === '') {
+        item[ownerField] = authUserId;
+        continue;
+    }
+
+    if (String(incomingOwner) !== authUserId) {
+        return res.status(403).json({
+            error: 'RLS owner mismatch',
+            message: `Item at index ${i} must have ${ownerField} equal to your user id`
+        });
+    }
+}
 
             return next();
         }
