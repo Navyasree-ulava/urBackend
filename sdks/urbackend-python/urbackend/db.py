@@ -25,11 +25,20 @@ def _build_params(
     count: bool = False,
     **extra: Any,
 ) -> Dict[str, Any]:
-    """Convert keyword arguments into a flat query-parameter dict."""
+    """Convert keyword arguments into a flat query-parameter dict.
+    
+    Reserved params: sort, limit, page, skip, populate, expand, count.
+    Filter keys and extra arguments must not conflict with reserved params.
+    """
     params: Dict[str, Any] = {}
+    reserved = {"sort", "limit", "page", "skip", "populate", "expand", "count"}
 
     if filter:
-        params.update(filter)
+        for k, v in filter.items():
+            if k in reserved:
+                raise ValueError(f"Filter key '{k}' conflicts with a reserved query parameter.")
+            params[k] = v
+
     if sort is not None:
         params["sort"] = sort
     if limit is not None:
@@ -44,7 +53,12 @@ def _build_params(
         params["expand"] = ",".join(expand) if isinstance(expand, list) else expand
     if count:
         params["count"] = "true"
-    params.update(extra)
+
+    for k, v in extra.items():
+        if k in reserved:
+            raise ValueError(f"Extra argument '{k}' conflicts with a reserved query parameter.")
+        params[k] = v
+
     return params
 
 

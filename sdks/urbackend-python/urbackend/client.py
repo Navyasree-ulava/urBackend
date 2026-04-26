@@ -83,12 +83,8 @@ class UrBackendClient:
         Use the Publishable Key (``pk_live_...``) instead.
     """
 
-    def __init__(
-        self,
-        api_key: str,
-        base_url: str = _DEFAULT_BASE_URL,
-        extra_headers: Optional[Dict[str, str]] = None,
-    ) -> None:
+    @staticmethod
+    def _validate_api_key(api_key: str) -> None:
         if not api_key:
             raise ValueError("api_key must not be empty.")
 
@@ -98,8 +94,16 @@ class UrBackendClient:
                 "Key (sk_live_...). Never use this in client-facing code — it grants "
                 "full access to your project. Use the Publishable Key (pk_live_...) "
                 "for end-user requests.",
-                stacklevel=2,
+                stacklevel=3,
             )
+
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = _DEFAULT_BASE_URL,
+        extra_headers: Optional[Dict[str, str]] = None,
+    ) -> None:
+        self._validate_api_key(api_key)
 
         self._extra_headers = extra_headers
         self._http = UrBackendHTTP(
@@ -188,15 +192,7 @@ class UrBackendClient:
             >>> client = UrBackendClient(api_key="pk_live_old")
             >>> client.connect("pk_live_new")  # now uses new key
         """
-        if not api_key:
-            raise ValueError("api_key must not be empty.")
-
-        if api_key.startswith("sk_live_"):
-            warnings.warn(
-                "\u26a0\ufe0f  urbackend-sdk: You are initialising the client with a Secret "
-                "Key (sk_live_...). Never use this in client-facing code.",
-                stacklevel=2,
-            )
+        self._validate_api_key(api_key)
 
         # Replace the shared HTTP session
         self._http.close()

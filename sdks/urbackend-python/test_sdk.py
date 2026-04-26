@@ -39,7 +39,7 @@ missing = [k for k, v in {
     "URBACKEND_TEST_PASSWORD": PASSWORD,
 }.items() if not v]
 if missing:
-    sys.exit(f"Missing required env vars: {', '.join(missing)}")# ← a collection in your project
+    sys.exit(f"Missing required env vars: {', '.join(missing)}")
 
 
 def separator(title: str) -> None:

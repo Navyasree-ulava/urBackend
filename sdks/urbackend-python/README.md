@@ -232,7 +232,8 @@ except ValidationError as e:
 | `request_password_reset(email)` | — | `dict` |
 | `reset_password(email, otp, new_password)` | — | `dict` |
 | `social_start_url(provider)` | `"github"` \| `"google"` | `str` |
-| `social_exchange(rt_code, token)` | — | `dict` || `set_token(token)` | — | `None` |
+| `social_exchange(rt_code, token)` | — | `dict` |
+| `set_token(token)` | — | `None` |
 | `get_token()` | — | `str \| None` |
 
 ---
