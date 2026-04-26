@@ -1,10 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
+<<<<<<< HEAD
 const { attachDeveloper, checkProjectLimit, checkCollectionLimit, checkByokGate, checkByodGate } = require('../middlewares/planEnforcement');
 const {verifyEmail} = require('@urbackend/common')
 const multer = require('multer');
 const storage = multer.memoryStorage();
+=======
+const { attachDeveloper, checkProjectLimit, checkCollectionLimit, checkByokGate } = require('../middlewares/planEnforcement');
+const { verifyEmail, checkAuthEnabled, loadProjectForAdmin } = require('@urbackend/common');
+>>>>>>> 0825b180cfed2fe9a8aa3a578e887c52b363b0ae
 
 const {
     createProject,
@@ -17,7 +22,6 @@ const {
     deleteRow,
     insertData,
     editRow,
-    uploadFile,
     listFiles,
     deleteFile,
     deleteAllFiles,
@@ -36,12 +40,12 @@ const {
     getMailTemplate,
     createMailTemplate,
     updateMailTemplate,
-    deleteMailTemplate
+    deleteMailTemplate,
+    requestUpload,
+    confirmUpload
 } = require("../controllers/project.controller")
 
 const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
-
-const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB Limit
 
 
 // POST REQ FOR CREATE PROJECT
@@ -74,11 +78,13 @@ router.patch('/:projectId/collections/:collectionName/data/:id', authMiddleware,
 // GET REQ FOR FILES
 router.get('/:projectId/storage/files', authMiddleware, listFiles);
 
-// POST REQ FOR UPLOAD FILE
-router.post('/:projectId/storage/upload', authMiddleware, verifyEmail, upload.single('file'), uploadFile);
-
 // POST REQ FOR DELETE FILE
 router.post('/:projectId/storage/delete', authMiddleware, verifyEmail, deleteFile);
+
+//SIGNED URL
+router.post('/:projectId/storage/upload-request', authMiddleware, verifyEmail, loadProjectForAdmin, requestUpload);
+//UPLOAD URL
+router.post('/:projectId/storage/upload-confirm', authMiddleware, verifyEmail, loadProjectForAdmin, confirmUpload);
 
 // DELETE REQ FOR PROJECT
 router.delete('/:projectId', authMiddleware, verifyEmail, deleteProject);
@@ -125,8 +131,7 @@ router.patch('/:projectId/auth/providers', authMiddleware, attachDeveloper, veri
 router.patch('/:projectId/collections/:collectionName/rls', authMiddleware, verifyEmail, updateCollectionRls);
 
 // ADMIN AUTH ROUTES
-const {checkAuthEnabled} = require('@urbackend/common');
-const {loadProjectForAdmin} = require('@urbackend/common');
+
 
 router.post('/:projectId/admin/users', authMiddleware, loadProjectForAdmin, checkAuthEnabled, createAdminUser);
 router.patch('/:projectId/admin/users/:userId/password', authMiddleware, loadProjectForAdmin, checkAuthEnabled, resetPassword);
