@@ -101,10 +101,11 @@ class UrBackendClient:
                 stacklevel=2,
             )
 
+        self._extra_headers = extra_headers
         self._http = UrBackendHTTP(
             api_key=api_key,
             base_url=base_url,
-            extra_headers=extra_headers,
+            extra_headers=self._extra_headers,
         )
 
         self._auth: Optional[AuthModule] = None
@@ -169,6 +170,7 @@ class UrBackendClient:
         self,
         api_key: str,
         base_url: str = _DEFAULT_BASE_URL,
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> "UrBackendClient":
         """Re-initialise the client with a new API key / base URL.
 
@@ -198,8 +200,9 @@ class UrBackendClient:
 
         # Replace the shared HTTP session
         self._http.close()
-        self._http = UrBackendHTTP(api_key=api_key, base_url=base_url)
-
+        merged = extra_headers if extra_headers is not None else self._extra_headers
+        self._http = UrBackendHTTP(api_key=api_key, base_url=base_url, extra_headers=merged)
+        self._extra_headers = merged
         # Reset lazy modules — they'll be recreated with the new http on next access
         self._auth = None
         self._db = None

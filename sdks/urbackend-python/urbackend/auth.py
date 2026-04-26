@@ -10,7 +10,8 @@ from typing import Any, Dict, Optional
 
 from .exceptions import AuthError
 from .http import UrBackendHTTP
-
+import warnings
+from .exceptions import UrBackendError
 
 class AuthModule:
     """Handles all ``/api/userAuth/*`` operations.
@@ -145,8 +146,11 @@ class AuthModule:
                 result = self._http.request(
                     "POST", "/api/userAuth/logout", token=active_token
                 )
-            except Exception:
-                pass
+            except UrBackendError as exc:
+                warnings.warn(
+                    f"urbackend-sdk: server logout failed ({exc}); cleared local token only.",
+                    stacklevel=2,
+                )
         self._session_token = None
         return result
 
@@ -387,8 +391,13 @@ class AuthModule:
             >>> url = client.auth.social_start_url("github")
             >>> return redirect(url)   # Django redirect
         """
-        base = self._http._base_url
-        api_key = self._http._api_key
+        base = self._http.base_url
+        api_key = self._http.api_key
+        if api_key.startswith("sk_live_"):
+            raise ValueError(
+                "social_start_url must not be called with a Secret Key (sk_live_...). "
+                "Use the Publishable Key (pk_live_...) for browser redirects."
+            )
         return f"{base}/api/userAuth/social/{provider}/start?key={api_key}"
 
     def social_exchange(self, rt_code: str, token: str) -> Dict[str, Any]:

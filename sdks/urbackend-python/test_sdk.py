@@ -16,6 +16,8 @@ Usage:
 
 import sys
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Ensure we import the local SDK, not any installed version
 sys.path.insert(0, os.path.dirname(__file__))
@@ -25,11 +27,19 @@ from urbackend import UrBackendClient, AuthError, NotFoundError, ValidationError
 # ────────────────────────────────────────────────────────────────
 #  CONFIG — Replace these with your actual values
 # ────────────────────────────────────────────────────────────────
-API_KEY    = "YOUR_PUBLISHABLE_KEY"        # ← your publishable key
-BASE_URL   = "YOUR_BASE_URL"    # ← or http://localhost:1235
-EMAIL      = "YOUR_EMAIL"
-PASSWORD   = "YOUR_PASSWORD"
-COLLECTION = "YOUR_COLLECTION"                         # ← a collection in your project
+API_KEY    = os.environ.get("URBACKEND_API_KEY")
+BASE_URL   = os.environ.get("URBACKEND_BASE_URL", "https://api.ub.bitbros.in")
+EMAIL      = os.environ.get("URBACKEND_TEST_EMAIL")
+PASSWORD   = os.environ.get("URBACKEND_TEST_PASSWORD")
+COLLECTION = os.environ.get("URBACKEND_TEST_COLLECTION", "posts")
+
+missing = [k for k, v in {
+    "URBACKEND_API_KEY": API_KEY,
+    "URBACKEND_TEST_EMAIL": EMAIL,
+    "URBACKEND_TEST_PASSWORD": PASSWORD,
+}.items() if not v]
+if missing:
+    sys.exit(f"Missing required env vars: {', '.join(missing)}")# ← a collection in your project
 
 
 def separator(title: str) -> None:
@@ -57,7 +67,7 @@ def main():
     separator("3. Login")
     try:
         session = client.auth.login(EMAIL, PASSWORD)
-        print(f"✅ Login successful!")
+        print("✅ Login successful!")
         print(f"   accessToken: {session.get('accessToken', 'N/A')[:40]}...")
         print(f"   expiresIn:   {session.get('expiresIn', 'N/A')}")
     except AuthError as e:
@@ -193,8 +203,8 @@ def main():
     #  ENHANCED TESTS — Negative, Query, Token, Error, Edge Cases
     # ══════════════════════════════════════════════════════════════
 
-    # ── 17. NEGATIVE: INSERT WITHOUT LOGIN ──────────────────────
-    separator("17. Negative: Insert Without Login (fresh client)")
+    # ── 16. NEGATIVE: INSERT WITHOUT LOGIN ──────────────────────
+    separator("16. Negative: Insert Without Login (fresh client)")
     no_auth_client = UrBackendClient(api_key=API_KEY, base_url=BASE_URL)
     try:
         no_auth_client.db.insert(
@@ -211,8 +221,8 @@ def main():
         print("   (May be expected if RLS is not enabled — insert went through without owner)")
     no_auth_client.close()
 
-    # ── 18. NEGATIVE: PROTECTED ENDPOINT WITHOUT TOKEN ──────────
-    separator("18. Negative: /me Without Token")
+    # ── 17. NEGATIVE: PROTECTED ENDPOINT WITHOUT TOKEN ──────────
+    separator("17. Negative: /me Without Token")
     no_auth_client2 = UrBackendClient(api_key=API_KEY, base_url=BASE_URL)
     try:
         no_auth_client2.auth.me()
@@ -222,8 +232,8 @@ def main():
         print(f"   Status code: {e.status_code}")
     no_auth_client2.close()
 
-    # ── 19. NEGATIVE: WRITE TO INVALID COLLECTION ───────────────
-    separator("19. Negative: Insert Into Non-Existent Collection")
+    # ── 18. NEGATIVE: WRITE TO INVALID COLLECTION ───────────────
+    separator("18. Negative: Insert Into Non-Existent Collection")
     try:
         client.db.insert(
             "this_collection_does_not_exist_xyz",
@@ -239,10 +249,10 @@ def main():
         print(f"⚠️  Raised {type(e).__name__}: {e}")
         print("   (Still handled — the SDK didn't crash)")
 
-    # ── 20. QUERY: LIMIT, SORT, FILTER ──────────────────────────
-    separator("20. Query Params: limit, sort, filter")
+    # ── 19. QUERY: LIMIT, SORT, FILTER ──────────────────────────
+    separator("19. Query Params: limit, sort, filter")
 
-    # 20a. Limit
+    # 19a. Limit
     try:
         limited = client.db.get_all(COLLECTION, limit=1)
         print(f"✅ limit=1 returned {len(limited)} doc(s)")
@@ -250,7 +260,7 @@ def main():
     except Exception as e:
         print(f"❌ limit query failed: {e}")
 
-    # 20b. Sort
+    # 19b. Sort
     try:
         sorted_asc = client.db.get_all(COLLECTION, limit=2, sort="createdAt:asc")
         sorted_desc = client.db.get_all(COLLECTION, limit=2, sort="createdAt:desc")
@@ -263,15 +273,15 @@ def main():
     except Exception as e:
         print(f"❌ sort query failed: {e}")
 
-    # 20c. Filter
+    # 19c. Filter
     try:
         filtered = client.db.get_all(COLLECTION, filter={"title": "SDK Test Post"}, limit=5)
         print(f"✅ filter={{title: 'SDK Test Post'}} returned {len(filtered)} docs")
     except Exception as e:
         print(f"❌ filter query failed: {e}")
 
-    # ── 21. TOKEN: MANUAL OVERRIDE ──────────────────────────────
-    separator("21. Token Override: Insert with Explicit Token")
+    # ── 20. TOKEN: MANUAL OVERRIDE ──────────────────────────────
+    separator("20. Token Override: Insert with Explicit Token")
     saved_token = client.auth.get_token()
     try:
         # Insert using an explicitly passed token (not relying on auto-storage)
@@ -293,10 +303,10 @@ def main():
     except Exception as e:
         print(f"❌ Token override test failed: {e}")
 
-    # ── 22. ERROR CONSISTENCY ───────────────────────────────────
-    separator("22. Error Consistency Check")
+    # ── 21. ERROR CONSISTENCY ───────────────────────────────────
+    separator("21. Error Consistency Check")
 
-    # 22a. Invalid login → should be AuthError (400 from backend)
+    # 21a. Invalid login → should be AuthError (400 from backend)
     try:
         UrBackendClient(api_key=API_KEY, base_url=BASE_URL).auth.login(
             "fake@fake.com", "wrong"
@@ -311,7 +321,7 @@ def main():
     except Exception as e:
         print(f"⚠️  Invalid login → {type(e).__name__}: {e}")
 
-    # 22b. Missing token → should always be AuthError (local check)
+    # 21b. Missing token → should always be AuthError (local check)
     try:
         UrBackendClient(api_key=API_KEY, base_url=BASE_URL).auth.me()
         print("❌ Missing token didn't raise!")
@@ -320,10 +330,10 @@ def main():
     except Exception as e:
         print(f"❌ Missing token → wrong type {type(e).__name__}: {e}")
 
-    # ── 23. EDGE CASES: EMPTY INSERT & BAD QUERY ────────────────
-    separator("23. Edge Cases: Empty Insert & Bad Query")
+    # ── 22. EDGE CASES: EMPTY INSERT & BAD QUERY ────────────────
+    separator("22. Edge Cases: Empty Insert & Bad Query")
 
-    # 23a. Empty insert data
+    # 22a. Empty insert data
     try:
         client.db.insert(COLLECTION, {}, token=client.auth.get_token())
         print("⚠️  Empty insert succeeded (collection may have no required fields)")
@@ -332,7 +342,7 @@ def main():
     except Exception as e:
         print(f"⚠️  Empty insert → {type(e).__name__}: {e}")
 
-    # 23b. get_all with no filters (should return all docs gracefully)
+    # 22b. get_all with no filters (should return all docs gracefully)
     try:
         all_no_filter = client.db.get_all(COLLECTION)
         print(f"✅ get_all with no params returned {len(all_no_filter)} docs (type={type(all_no_filter).__name__})")
@@ -340,7 +350,7 @@ def main():
     except Exception as e:
         print(f"❌ get_all no-filter failed: {e}")
 
-    # 23c. get_one with garbage ID
+    # 22c. get_one with garbage ID
     try:
         client.db.get_one(COLLECTION, "not_a_valid_id")
         print("❌ get_one with bad ID didn't raise!")
@@ -353,8 +363,8 @@ def main():
     #  END OF ENHANCED TESTS
     # ══════════════════════════════════════════════════════════════
 
-    # ── 16. LOGOUT ──────────────────────────────────────────────
-    separator("16. Logout")
+    # ── 23. LOGOUT ──────────────────────────────────────────────
+    separator("23. Logout")
     result = client.auth.logout()
     print(f"✅ Logged out: {result}")
     print(f"   Token after logout: {client.auth.get_token()}")
@@ -367,5 +377,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-"""Description": "Live integration test script that tests every SDK function against a real urBackend instance"
-"""
+

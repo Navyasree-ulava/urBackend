@@ -84,7 +84,7 @@ class MailModule:
             ...         "appUrl": "https://myapp.com",
             ...     },
             ... )
-            >>> print(result.get("messageId"))
+            >>> print(result.get("id"))
         """
         payload: Dict[str, Any] = {"to": to}
 

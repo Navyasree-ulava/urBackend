@@ -7,12 +7,13 @@ name = "urbackend"
 version = "0.1.0"
 description = "Official Python SDK for urBackend — the instant Backend-as-a-Service for MongoDB."
 readme = "README.md"
-license = "MIT"
+license = { text = "MIT" }
 authors = [
     { name = "urBackend", email = "hello@bitbros.in" }
 ]
 keywords = ["urbackend", "baas", "mongodb", "sdk", "backend-as-a-service"]
 classifiers = [
+    "License :: OSI Approved :: MIT License",
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",

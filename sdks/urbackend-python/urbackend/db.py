@@ -250,10 +250,13 @@ class DatabaseModule:
         """
         params = _build_params(filter=filter, count=True)
         path = f"/api/data/{collection}"
-        result = self._http.request("GET", path, params=params, token=token)
+        try:
+            result = self._http.request("GET", path, params=params, token=token)
+        except NotFoundError:
+            return 0
         if isinstance(result, dict):
             return int(result.get("count", 0))
-        return 0
+        return 0        
 
     def get_one(
         self,
@@ -416,10 +419,9 @@ class DatabaseModule:
             ...                           token=client.auth.get_token())
             >>> assert result["deleted"] is True
         """
-        result = self._http.request(
+        # http.request raises on non-2xx, so reaching this point means the
+        # delete succeeded.
+        self._http.request(
             "DELETE", f"/api/data/{collection}/{doc_id}", token=token
         )
-        if isinstance(result, dict):
-            deleted = result.get("id") == doc_id or result.get("message") == "Document deleted"
-            return {"deleted": bool(deleted)}
-        return {"deleted": False}
+        return {"deleted": True}

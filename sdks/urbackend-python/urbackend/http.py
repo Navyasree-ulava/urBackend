@@ -60,7 +60,20 @@ def _parse_api_error(response: requests.Response) -> UrBackendError:
         return NotFoundError(message, endpoint)
     if status == 429:
         retry_after_raw = response.headers.get("Retry-After")
-        retry_after = int(retry_after_raw) if retry_after_raw else None
+        retry_after: Optional[int] = None
+        if retry_after_raw:
+            try:
+                retry_after = int(retry_after_raw)
+            except ValueError:
+                # HTTP-date form — convert to seconds-from-now if parseable, else ignore
+                try:
+                    from email.utils import parsedate_to_datetime
+                    from datetime import datetime, timezone
+                    target = parsedate_to_datetime(retry_after_raw)
+                    delta = (target - datetime.now(timezone.utc)).total_seconds()
+                    retry_after = max(0, int(delta))
+                except (TypeError, ValueError):
+                    retry_after = None
         return RateLimitError(message, endpoint, retry_after)
     if status == 400:
         return ValidationError(message, endpoint)
@@ -101,6 +114,14 @@ class UrBackendHTTP:
         self._base_url = base_url.rstrip("/")
         self._extra_headers: Dict[str, str] = extra_headers or {}
         self._session = requests.Session()
+
+    @property
+    def api_key(self) -> str:
+        return self._api_key
+
+    @property
+    def base_url(self) -> str:
+        return self._base_url
 
     # ------------------------------------------------------------------
     # Public interface
@@ -196,8 +217,12 @@ class UrBackendHTTP:
             except ValueError:
                 return response.text
 
-            # Unwrap { success, data, message } envelope
-            if isinstance(payload, dict) and "data" in payload:
+            # Unwrap { success, data, message } envelope only when it's clearly that shape
+            if (
+                isinstance(payload, dict)
+                and payload.get("success") is True
+                and "data" in payload
+            ):
                 return payload["data"]
             return payload
 
