@@ -38,6 +38,18 @@ jest.mock('@urbackend/common', () => {
     verifyUploadedFile: jest.fn(),
     isProjectStorageExternal: jest.fn(),
     getBucket: jest.fn(() => 'dev-files'),
+    sanitizeObjectId: jest.fn((value) => {
+      if (typeof value !== 'string') return null;
+      const normalized = value.trim();
+      return /^[a-fA-F0-9]{24}$/.test(normalized) ? normalized : null;
+    }),
+    sanitizeNonEmptyString: jest.fn((value, options = {}) => {
+      if (typeof value !== 'string') return null;
+      const normalized = value.trim();
+      if (!normalized) return null;
+      if (normalized.length > (options.maxLength || 1024)) return null;
+      return normalized;
+    }),
     AppError,
     __mockStorageFrom: mockStorageFrom,
   };
@@ -52,6 +64,7 @@ const {
 } = require('@urbackend/common');
 
 const controller = require('../controllers/project.controller');
+const PROJECT_ID = '507f1f77bcf86cd799439011';
 
 const makeRes = () => {
   const res = { status: jest.fn(), json: jest.fn() };
@@ -63,7 +76,7 @@ const makeRes = () => {
 const makeNext = () => jest.fn();
 
 const makeProject = (overrides = {}) => ({
-  _id: 'project1',
+  _id: PROJECT_ID,
   owner: 'dev1',
   storageUsed: 100,
   storageLimit: 1024 * 1024,
@@ -86,7 +99,7 @@ describe('dashboard project.controller presigned upload', () => {
   describe('requestUpload', () => {
     test('returns 400 for invalid input', async () => {
       const req = {
-        params: { projectId: 'project1' },
+        params: { projectId: PROJECT_ID },
         body: { filename: 'a.txt', contentType: 'text/plain', size: 'abc' },
         user: { _id: 'dev1' },
       };
@@ -97,7 +110,7 @@ describe('dashboard project.controller presigned upload', () => {
 
       expect(next).toHaveBeenCalledWith(expect.objectContaining({
         statusCode: 400,
-        message: 'filename, contentType, and size are required.',
+        message: 'projectId, filename, contentType, and size are required.',
       }));
     });
 
@@ -106,7 +119,7 @@ describe('dashboard project.controller presigned upload', () => {
       isProjectStorageExternal.mockReturnValue(false);
 
       const req = {
-        params: { projectId: 'project1' },
+        params: { projectId: PROJECT_ID },
         body: { filename: 'a.txt', contentType: 'text/plain', size: 200 },
         user: { _id: 'dev1' },
       };
@@ -130,7 +143,7 @@ describe('dashboard project.controller presigned upload', () => {
       });
 
       const req = {
-        params: { projectId: 'project1' },
+        params: { projectId: PROJECT_ID },
         body: { filename: 'my file.txt', contentType: 'text/plain', size: 1234 },
         user: { _id: 'dev1' },
       };
@@ -140,8 +153,8 @@ describe('dashboard project.controller presigned upload', () => {
       await controller.requestUpload(req, res, next);
 
       expect(getPresignedUploadUrl).toHaveBeenCalledWith(
-        expect.objectContaining({ _id: 'project1' }),
-        'project1/mocked-uuid_my_file.txt',
+        expect.objectContaining({ _id: PROJECT_ID }),
+        `${PROJECT_ID}/mocked-uuid_my_file.txt`,
         'text/plain',
         1234,
       );
@@ -151,7 +164,7 @@ describe('dashboard project.controller presigned upload', () => {
         data: {
           signedUrl: 'https://signed.example/upload',
           token: 't1',
-          filePath: 'project1/mocked-uuid_my_file.txt',
+          filePath: `${PROJECT_ID}/mocked-uuid_my_file.txt`,
         },
         message: 'Upload URL generated successfully.',
       });
@@ -165,8 +178,8 @@ describe('dashboard project.controller presigned upload', () => {
       isProjectStorageExternal.mockReturnValue(false);
 
       const req = {
-        params: { projectId: 'project1' },
-        body: { filePath: 'project2/file.txt', size: 200 },
+        params: { projectId: PROJECT_ID },
+        body: { filePath: '507f1f77bcf86cd799439012/file.txt', size: 200 },
         user: { _id: 'dev1' },
       };
       const res = makeRes();
@@ -187,8 +200,8 @@ describe('dashboard project.controller presigned upload', () => {
       mockStorageFrom.remove.mockResolvedValue({ data: null, error: null });
 
       const req = {
-        params: { projectId: 'project1' },
-        body: { filePath: 'project1/file.txt', size: 200 },
+        params: { projectId: PROJECT_ID },
+        body: { filePath: `${PROJECT_ID}/file.txt`, size: 200 },
         user: { _id: 'dev1' },
       };
       const res = makeRes();
@@ -196,7 +209,7 @@ describe('dashboard project.controller presigned upload', () => {
 
       await controller.confirmUpload(req, res, next);
 
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project1/file.txt']);
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith([`${PROJECT_ID}/file.txt`]);
       expect(next).toHaveBeenCalledWith(expect.objectContaining({
         statusCode: 409,
         message: 'Uploaded file is not visible yet. Please retry confirmation.',
@@ -210,8 +223,8 @@ describe('dashboard project.controller presigned upload', () => {
       mockStorageFrom.remove.mockResolvedValue({ data: null, error: null });
 
       const req = {
-        params: { projectId: 'project1' },
-        body: { filePath: 'project1/file.txt', size: 900 },
+        params: { projectId: PROJECT_ID },
+        body: { filePath: `${PROJECT_ID}/file.txt`, size: 900 },
         user: { _id: 'dev1' },
       };
       const res = makeRes();
@@ -223,7 +236,7 @@ describe('dashboard project.controller presigned upload', () => {
         statusCode: 400,
         message: 'Declared file size does not match uploaded file size.',
       }));
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project1/file.txt']);
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith([`${PROJECT_ID}/file.txt`]);
     });
 
     test('charges quota and returns success on internal storage', async () => {
@@ -234,8 +247,8 @@ describe('dashboard project.controller presigned upload', () => {
       mockStorageFrom.getPublicUrl.mockReturnValue({ data: { publicUrl: 'https://cdn.example/p/project1/file.txt' } });
 
       const req = {
-        params: { projectId: 'project1' },
-        body: { filePath: 'project1/file.txt', size: 1024 },
+        params: { projectId: PROJECT_ID },
+        body: { filePath: `${PROJECT_ID}/file.txt`, size: 1024 },
         user: { _id: 'dev1' },
       };
       const res = makeRes();
@@ -245,7 +258,7 @@ describe('dashboard project.controller presigned upload', () => {
 
       expect(Project.updateOne).toHaveBeenCalledWith(
         {
-          _id: 'project1',
+          _id: PROJECT_ID,
           $or: [
             { storageLimit: -1 },
             { $expr: { $lte: [{ $add: ['$storageUsed', 1024] }, '$storageLimit'] } },
@@ -258,7 +271,7 @@ describe('dashboard project.controller presigned upload', () => {
         success: true,
         data: {
           message: 'Upload confirmed',
-          path: 'project1/file.txt',
+          path: `${PROJECT_ID}/file.txt`,
           provider: 'internal',
           url: 'https://cdn.example/p/project1/file.txt',
         },
@@ -274,8 +287,8 @@ describe('dashboard project.controller presigned upload', () => {
       mockStorageFrom.getPublicUrl.mockReturnValue({ data: { publicUrl: null } });
 
       const req = {
-        params: { projectId: 'project1' },
-        body: { filePath: 'project1/file.txt', size: 512 },
+        params: { projectId: PROJECT_ID },
+        body: { filePath: `${PROJECT_ID}/file.txt`, size: 512 },
         user: { _id: 'dev1' },
       };
       const res = makeRes();
@@ -289,7 +302,7 @@ describe('dashboard project.controller presigned upload', () => {
         success: true,
         data: {
           message: 'Upload confirmed',
-          path: 'project1/file.txt',
+          path: `${PROJECT_ID}/file.txt`,
           provider: 'external',
           url: null,
           warning: 'Upload confirmed, but a public URL is unavailable.',

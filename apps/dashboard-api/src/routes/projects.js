@@ -3,8 +3,6 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const { attachDeveloper, checkProjectLimit, checkCollectionLimit, checkByokGate } = require('../middlewares/planEnforcement');
 const { verifyEmail, checkAuthEnabled, loadProjectForAdmin } = require('@urbackend/common');
-const multer = require('multer');
-const storage = multer.memoryStorage();
 
 const {
     createProject,
@@ -17,7 +15,6 @@ const {
     deleteRow,
     insertData,
     editRow,
-    uploadFile,
     listFiles,
     deleteFile,
     deleteAllFiles,
@@ -42,8 +39,6 @@ const {
 } = require("../controllers/project.controller")
 
 const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
-
-const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB Limit
 
 
 // POST REQ FOR CREATE PROJECT
@@ -75,9 +70,6 @@ router.patch('/:projectId/collections/:collectionName/data/:id', authMiddleware,
 
 // GET REQ FOR FILES
 router.get('/:projectId/storage/files', authMiddleware, listFiles);
-
-// POST REQ FOR UPLOAD FILE
-router.post('/:projectId/storage/upload', authMiddleware, verifyEmail, upload.single('file'), uploadFile);
 
 // POST REQ FOR DELETE FILE
 router.post('/:projectId/storage/delete', authMiddleware, verifyEmail, deleteFile);

@@ -42,7 +42,6 @@ jest.mock('../controllers/project.controller', () => {
     deleteRow: jest.fn(ok),
     insertData: jest.fn(ok),
     editRow: jest.fn(ok),
-    uploadFile: jest.fn(ok),
     listFiles: jest.fn(ok),
     deleteFile: jest.fn(ok),
     deleteAllFiles: jest.fn(ok),
@@ -84,6 +83,14 @@ beforeEach(() => {
 });
 
 describe('projects storage presigned routes', () => {
+  test('legacy proxy upload route is removed', async () => {
+    const res = await request(app)
+      .post('/api/projects/project1/storage/upload')
+      .send({});
+
+    expect(res.status).toBe(404);
+  });
+
   test('upload-request route is wired and protected', async () => {
     const res = await request(app)
       .post('/api/projects/project1/storage/upload-request')

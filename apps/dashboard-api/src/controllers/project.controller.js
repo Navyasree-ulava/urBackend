@@ -9,6 +9,8 @@ const {
   createCollectionSchema,
   updateExternalConfigSchema,
   updateAuthProvidersSchema,
+  sanitizeObjectId,
+  sanitizeNonEmptyString,
 } = require("@urbackend/common");
 const { generateApiKey, hashApiKey } = require("@urbackend/common");
 const { z } = require("zod");
@@ -253,7 +255,7 @@ module.exports.createProject = async (req, res) => {
     if (req.projectLimit !== undefined) {
       const currentCount = await Project.countDocuments(
         { owner: req.user._id },
-        { session }
+        { session },
       );
 
       if (currentCount >= req.projectLimit) {
@@ -301,6 +303,7 @@ module.exports.createProject = async (req, res) => {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: err.issues });
     }
+
     res.status(500).json({ error: err.message });
   }
 };
@@ -723,7 +726,6 @@ module.exports.createCollection = async (req, res) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-
     try {
       if (connection && compiledCollectionName) {
         clearCompiledModel(connection, compiledCollectionName);
@@ -1077,55 +1079,6 @@ module.exports.listFiles = async (req, res) => {
   }
 };
 
-module.exports.uploadFile = async (req, res) => {
-  try {
-    const { projectId } = req.params;
-    const file = req.file;
-
-    if (!file) return res.status(400).json({ error: "No file uploaded" });
-
-    const project = await Project.findOne({
-      _id: projectId,
-      owner: req.user._id,
-    }).select(
-      "+resources.storage.config.encrypted +resources.storage.config.iv +resources.storage.config.tag resources.storage.isExternal storageUsed storageLimit",
-    );
-    if (!project) return res.status(404).json({ error: "Project not found" });
-
-    const external = isProjectStorageExternal(project);
-
-    if (!external) {
-      if (project.storageUsed + file.size > project.storageLimit) {
-        return res.status(403).json({ error: "Storage limit exceeded" });
-      }
-    }
-
-    const supabase = await getStorage(project);
-    const bucket = getBucket(project);
-
-    const safeName = file.originalname.replace(/\s+/g, "_");
-    const path = `${projectId}/${randomUUID()}_${safeName}`;
-
-    const { error } = await supabase.storage
-      .from(bucket)
-      .upload(path, file.buffer, {
-        contentType: file.mimetype,
-        upsert: false,
-      });
-
-    if (error) throw error;
-
-    if (!external) {
-      project.storageUsed += file.size;
-      await project.save();
-    }
-
-    res.json({ success: true, path });
-  } catch (err) {
-    res.status(500).json({ error: err });
-  }
-};
-
 module.exports.deleteFile = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -1222,13 +1175,19 @@ module.exports.deleteAllFiles = async (req, res) => {
 
 module.exports.requestUpload = async (req, res, next) => {
   try {
-    const { projectId } = req.params;
+    const projectId = sanitizeObjectId(req.params?.projectId);
     const { filename, contentType, size } = req.body;
+    const sanitizedFilename = sanitizeNonEmptyString(filename, {
+      maxLength: 255,
+    });
+    const sanitizedContentType = sanitizeNonEmptyString(contentType, {
+      maxLength: 255,
+    });
     const numericSize = parsePositiveSize(size);
 
-    if (!filename || !contentType || numericSize === null) {
+    if (!projectId || !sanitizedFilename || !sanitizedContentType || numericSize === null) {
       return next(
-        new AppError(400, "filename, contentType, and size are required."),
+        new AppError(400, "projectId, filename, contentType, and size are required."),
       );
     }
 
@@ -1247,7 +1206,7 @@ module.exports.requestUpload = async (req, res, next) => {
 
     const external = isProjectStorageExternal(project);
 
-    // just peek at quota - don't charge yet, upload hasn't happened
+    // Pre-check quota only; actual storage usage is charged after confirmUpload verifies object existence and size.
     if (!external) {
       const storageLimit =
         typeof project.storageLimit === "number"
@@ -1261,13 +1220,13 @@ module.exports.requestUpload = async (req, res, next) => {
       }
     }
 
-    const safeName = filename.replace(/\s+/g, "_");
+    const safeName = sanitizedFilename.replace(/\s+/g, "_");
     const filePath = `${projectId}/${randomUUID()}_${safeName}`;
 
     const { signedUrl, token } = await getPresignedUploadUrl(
       project,
       filePath,
-      contentType,
+      sanitizedContentType,
       numericSize,
     );
 
@@ -1284,12 +1243,15 @@ module.exports.requestUpload = async (req, res, next) => {
 
 module.exports.confirmUpload = async (req, res, next) => {
   try {
-    const { projectId } = req.params;
+    const projectId = sanitizeObjectId(req.params?.projectId);
     const { filePath, size } = req.body;
+    const sanitizedFilePath = sanitizeNonEmptyString(filePath, {
+      maxLength: 1024,
+    });
     const declaredSize = parsePositiveSize(size);
 
-    if (!filePath || declaredSize === null) {
-      return next(new AppError(400, "filePath and size are required."));
+    if (!projectId || !sanitizedFilePath || declaredSize === null) {
+      return next(new AppError(400, "projectId, filePath, and size are required."));
     }
 
     const project = await Project.findOne({
@@ -1302,7 +1264,7 @@ module.exports.confirmUpload = async (req, res, next) => {
     if (!project) return next(new AppError(404, "Project not found"));
 
     const external = isProjectStorageExternal(project);
-    const normalizedPath = normalizeProjectPath(projectId, filePath);
+    const normalizedPath = normalizeProjectPath(projectId, sanitizedFilePath);
 
     // make sure client isn't confirming someone else's file
     if (!normalizedPath) {
