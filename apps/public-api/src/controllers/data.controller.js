@@ -8,7 +8,7 @@ const { validateData, validateUpdateData, aggregateSchema } = require("@urbacken
 const { performance } = require('perf_hooks');
 const { dispatchWebhooks } = require('../utils/webhookDispatcher');
 const { z } = require("zod");
-const AppError = require("../utils/AppError");
+const { AppError } = require("@urbackend/common");
 
 const isDebug = process.env.DEBUG === 'true';
 
