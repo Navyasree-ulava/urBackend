@@ -50,8 +50,6 @@ module.exports = async (req, res, next) => {
         const method = String(req.method || '').toUpperCase();
 
         if (method === 'POST') {
-            const incomingOwner = req.body?.[ownerField];
-
             if (ownerField === '_id') {
                 return res.status(403).json({
                     error: 'Insert denied',
@@ -59,17 +57,39 @@ module.exports = async (req, res, next) => {
                 });
             }
 
-            if (incomingOwner === undefined || incomingOwner === null || incomingOwner === '') {
-                req.body[ownerField] = authUserId;
-                return next();
-            }
+            const bodyItems = Array.isArray(req.body) ? req.body : [req.body];
 
-            if (String(incomingOwner) !== authUserId) {
-                return res.status(403).json({
-                    error: 'RLS owner mismatch',
-                    message: `You can only create documents with ${ownerField} equal to your user id.`
-                });
-            }
+          if (bodyItems.length === 0) {
+    return res.status(400).json({
+        error: 'Invalid request body',
+        message: 'Request body cannot be an empty array.'
+    });
+}
+
+for (let i = 0; i < bodyItems.length; i++) {
+    const item = bodyItems[i];
+
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return res.status(400).json({
+            error: 'Invalid request body',
+           message: `Item at index ${i} must be a valid object`
+        });
+    }
+
+    const incomingOwner = item?.[ownerField];
+
+    if (incomingOwner === undefined || incomingOwner === null || incomingOwner === '') {
+        item[ownerField] = authUserId;
+        continue;
+    }
+
+    if (String(incomingOwner) !== authUserId) {
+        return res.status(403).json({
+            error: 'RLS owner mismatch',
+            message: `Item at index ${i} must have ${ownerField} equal to your user id`
+        });
+    }
+}
 
             return next();
         }
@@ -89,15 +109,28 @@ module.exports = async (req, res, next) => {
 
             if (ownerField === '_id') {
                 if (String(doc._id) !== authUserId) {
-                    return res.status(403).json({ error: 'RLS owner mismatch', message: 'You can only modify your own document.' });
+                    return res.status(403).json({
+                        error: 'RLS owner mismatch',
+                        message: 'You can only modify your own document.'
+                    });
                 }
             } else {
-                if (req.body && Object.prototype.hasOwnProperty.call(req.body, ownerField) && String(req.body[ownerField]) !== String(doc[ownerField])) {
-                    return res.status(403).json({ error: 'Owner field immutable', message: `${ownerField} cannot be changed under RLS.` });
+                if (
+                    req.body &&
+                    Object.prototype.hasOwnProperty.call(req.body, ownerField) &&
+                    String(req.body[ownerField]) !== String(doc[ownerField])
+                ) {
+                    return res.status(403).json({
+                        error: 'Owner field immutable',
+                        message: `${ownerField} cannot be changed under RLS.`
+                    });
                 }
 
                 if (doc[ownerField] === undefined || doc[ownerField] === null || String(doc[ownerField]) !== authUserId) {
-                    return res.status(403).json({ error: 'RLS owner mismatch', message: 'You can only modify your own document.' });
+                    return res.status(403).json({
+                        error: 'RLS owner mismatch',
+                        message: 'You can only modify your own document.'
+                    });
                 }
             }
 
